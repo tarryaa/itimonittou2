@@ -4,7 +4,7 @@
 
 リポジトリ: https://github.com/tarryaa/itimonittou2
 
-Pages公開URL（デプロイ成功後）: https://tarryaa.github.io/itimonittou2/
+Pages公開予定URL（現在は未有効・未公開）: https://tarryaa.github.io/itimonittou2/
 
 ## 使い方
 

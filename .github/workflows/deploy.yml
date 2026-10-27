@@ -22,6 +22,13 @@ jobs:
       - run: npm ci
       - run: npm test -- --run
       - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results
+          path: test-results/
       - uses: actions/configure-pages@v5
         with:
           enablement: true
