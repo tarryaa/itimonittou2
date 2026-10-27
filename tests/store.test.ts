@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Dataset } from "../src/model";
 import {
   EMERGENCY_JOURNAL_KEY,
+  EMERGENCY_SLICE_KEYS,
   emptyState,
   exportBackup,
   loadAppData,
@@ -193,27 +194,29 @@ describe("synchronous recovery journal", () => {
   it("writes a safety snapshot synchronously before the asynchronous commit", async () => {
     const state = learned();
     const saving = saveState(state);
-    const journal = JSON.parse(storage.getItem(EMERGENCY_JOURNAL_KEY)!);
-    expect(journal.state.mistakes).toEqual(state.mistakes);
+    const journal = JSON.parse(storage.getItem(EMERGENCY_SLICE_KEYS.learning)!);
+    expect(journal.value.mistakes).toEqual(state.mistakes);
     state.mistakes.length = 0;
-    expect(journal.state.mistakes).toHaveLength(1);
+    expect(journal.value.mistakes).toHaveLength(1);
     await saving;
-    expect(storage.getItem(EMERGENCY_JOURNAL_KEY)).toBeNull();
+    expect(storage.getItem(EMERGENCY_SLICE_KEYS.learning)).toBeNull();
   });
 
   it("recovers an uncommitted state on restart without changing the source", async () => {
     const pending = learned();
     pending.settings.fontSize = 22;
     const saved = saveState(pending);
-    const journal = storage.getItem(EMERGENCY_JOURNAL_KEY)!;
+    const journals = Object.values(EMERGENCY_SLICE_KEYS).map(
+      (key) => [key, storage.getItem(key)!] as const,
+    );
     await saved;
     await saveState(emptyState());
     // The old page closed with the database still old and this safety copy new.
-    storage.setItem(EMERGENCY_JOURNAL_KEY, journal);
+    for (const [key, journal] of journals) storage.setItem(key, journal);
     const recovered = await loadAppData(original);
     expect(recovered.state).toEqual(pending);
     expect(recovered.dataset).toEqual(original);
-    expect(storage.getItem(EMERGENCY_JOURNAL_KEY)).toBeNull();
+    expect(storage.getItem(EMERGENCY_SLICE_KEYS.learning)).toBeNull();
     expect((await loadAppData(original)).state).toEqual(pending);
   });
 
@@ -223,25 +226,158 @@ describe("synchronous recovery journal", () => {
     newer.mistakes.push({ ...newer.mistakes[0], id: "m2" });
     const first = saveState(firstState);
     const second = saveState(newer);
-    const latestJournal = storage.getItem(EMERGENCY_JOURNAL_KEY);
+    const latestJournal = storage.getItem(EMERGENCY_SLICE_KEYS.learning);
     await first;
-    expect(storage.getItem(EMERGENCY_JOURNAL_KEY)).toBe(latestJournal);
+    expect(storage.getItem(EMERGENCY_SLICE_KEYS.learning)).toBe(latestJournal);
     await second;
-    expect(storage.getItem(EMERGENCY_JOURNAL_KEY)).toBeNull();
+    expect(storage.getItem(EMERGENCY_SLICE_KEYS.learning)).toBeNull();
     expect((await loadAppData(original)).state.mistakes).toHaveLength(2);
   });
 
   it("falls back to IDB when safety-copy quota is unavailable without replaying stale state", async () => {
     const saving = saveState(learned());
-    const staleJournal = storage.getItem(EMERGENCY_JOURNAL_KEY)!;
+    const staleJournal = storage.getItem(EMERGENCY_SLICE_KEYS.learning)!;
     await saving;
-    storage.setItem(EMERGENCY_JOURNAL_KEY, staleJournal);
+    storage.setItem(EMERGENCY_SLICE_KEYS.learning, staleJournal);
     storage.setItem = () => {
       throw new DOMException("full", "QuotaExceededError");
     };
     await saveState(emptyState());
-    expect(storage.getItem(EMERGENCY_JOURNAL_KEY)).toBeNull();
+    expect(storage.getItem(EMERGENCY_SLICE_KEYS.learning)).toBeNull();
     expect((await loadAppData(original)).state.mistakes).toHaveLength(0);
+  });
+
+  it("recovers a pending journal created by the previously published app", async () => {
+    await saveState(emptyState());
+    storage.setItem(
+      EMERGENCY_JOURNAL_KEY,
+      JSON.stringify({
+        format: "itimonittou-pending-state",
+        version: 1,
+        revision: "old-app",
+        state: learned(),
+      }),
+    );
+    expect((await loadAppData(original)).state).toEqual(learned());
+    expect(storage.getItem(EMERGENCY_JOURNAL_KEY)).toBeNull();
+  });
+
+  it("writes only preferences for position changes and preserves large learning/edit slices", async () => {
+    const before = learned();
+    await saveState(before);
+    const transactions = vi.spyOn(IDBDatabase.prototype, "transaction");
+    const clone = vi.spyOn(globalThis, "structuredClone");
+    const next = {
+      ...before,
+      position: { id: before.position!.id, offset: -73 },
+    };
+    const saving = saveState(next, { changed: ["preferences"] });
+    expect(storage.getItem(EMERGENCY_SLICE_KEYS.edits)).toBeNull();
+    expect(storage.getItem(EMERGENCY_SLICE_KEYS.learning)).toBeNull();
+    expect(
+      JSON.parse(storage.getItem(EMERGENCY_SLICE_KEYS.preferences)!).value
+        .position.offset,
+    ).toBe(-73);
+    expect(
+      clone.mock.calls.every(
+        ([value]) =>
+          value !== before &&
+          value !== before.mistakes &&
+          value !== before.edits,
+      ),
+    ).toBe(true);
+    next.position.offset = 999;
+    await saving;
+    const writes = transactions.mock.calls.filter(
+      ([, mode]) => mode === "readwrite",
+    );
+    expect(writes).toHaveLength(1);
+    expect(writes[0][0]).toEqual(["preferences"]);
+    const loaded = await loadAppData(original);
+    expect(loaded.state.position?.offset).toBe(-73);
+    expect(loaded.state.mistakes).toEqual(before.mistakes);
+    expect(loaded.state.edits).toEqual(before.edits);
+  });
+
+  it("keeps an uncommitted learning revision safe when a later position save completes", async () => {
+    const before = learned();
+    const saving = saveState(before);
+    const learningJournal = storage.getItem(EMERGENCY_SLICE_KEYS.learning)!;
+    await saving;
+    // The previous process committed none of this learning copy.
+    await saveState(emptyState());
+    storage.setItem(EMERGENCY_SLICE_KEYS.learning, learningJournal);
+    const position = { id: before.position!.id, offset: -99 };
+    await saveState({ ...before, position }, { changed: ["preferences"] });
+    expect(storage.getItem(EMERGENCY_SLICE_KEYS.learning)).toBe(
+      learningJournal,
+    );
+    const loaded = await loadAppData(original);
+    expect(loaded.state.mistakes).toEqual(before.mistakes);
+    expect(loaded.state.position).toEqual(position);
+  });
+
+  it("retains session viewing progress after a preferences-only commit without leaking internal fields", async () => {
+    const before = learned();
+    await saveState(before);
+    const added = original.questions[1].id;
+    const updated = {
+      ...before,
+      sessions: [
+        {
+          ...before.sessions[0],
+          viewed: [...before.sessions[0].viewed, added],
+        },
+      ],
+    };
+    await saveState(updated, { changed: ["preferences"] });
+    const loaded = await loadAppData(original);
+    expect(loaded.state.sessions[0].viewed).toContain(added);
+    expect(loaded.state.mistakes).toEqual(before.mistakes);
+    expect(loaded.state).not.toHaveProperty("sessionProgress");
+    expect(
+      JSON.parse(exportBackup(loaded.dataset, loaded.state)).state,
+    ).not.toHaveProperty("sessionProgress");
+    await restoreBackup(exportBackup(original, before));
+    expect(
+      (await loadAppData(original)).state.sessions[0].viewed,
+    ).not.toContain(added);
+    await recoverBeforeRestore();
+    expect((await loadAppData(original)).state.sessions[0].viewed).toContain(
+      added,
+    );
+  });
+
+  it("recovers uncommitted preference viewing progress and rejects unknown question IDs", async () => {
+    const before = learned();
+    await saveState(before);
+    const added = original.questions[1].id;
+    const updated = {
+      ...before,
+      sessions: [
+        {
+          ...before.sessions[0],
+          viewed: [...before.sessions[0].viewed, added],
+        },
+      ],
+    };
+    const saving = saveState(updated, { changed: ["preferences"] });
+    const journal = storage.getItem(EMERGENCY_SLICE_KEYS.preferences)!;
+    await saving;
+    await saveState(before);
+    storage.setItem(EMERGENCY_SLICE_KEYS.preferences, journal);
+    expect((await loadAppData(original)).state.sessions[0].viewed).toContain(
+      added,
+    );
+    await saveState(before);
+    const invalid = JSON.parse(journal);
+    invalid.value.sessionProgress.viewed.push("missing-question");
+    storage.setItem(EMERGENCY_SLICE_KEYS.preferences, JSON.stringify(invalid));
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    expect(
+      (await loadAppData(original)).state.sessions[0].viewed,
+    ).not.toContain("missing-question");
+    expect(console.warn).toHaveBeenCalledOnce();
   });
 
   it("ignores an invalid recovery copy and preserves the existing database", async () => {

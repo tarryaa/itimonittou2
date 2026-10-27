@@ -154,6 +154,7 @@ function Blank({
       setPresent(true);
       return;
     }
+    if (!present) return;
     const timer = window.setTimeout(() => setPresent(false), 130);
     return () => window.clearTimeout(timer);
   }, [open]);

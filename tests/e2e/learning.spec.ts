@@ -1,10 +1,64 @@
 import { test, expect, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { normalizeDataset } from "../../src/dataset";
+import type { Dataset } from "../../src/model";
+
+const source = JSON.parse(
+  readFileSync(
+    new URL("../../public/data/original.json", import.meta.url),
+    "utf8",
+  ),
+) as Dataset;
+const questions = normalizeDataset(source);
+async function settled(page: Page) {
+  await expect(page.locator(".questions")).toHaveAttribute(
+    "data-restoring",
+    "false",
+  );
+}
+async function navigate(page: Page, id: string) {
+  const question = questions.find((q) => q.id === id)!;
+  const firstInChapter = questions.find((q) => q.chapter === question.chapter)!;
+  await page.locator(".brand").click();
+  const contents = page.getByRole("dialog", { name: "時代・章から探す" });
+  await contents
+    .locator(".contents-row")
+    .filter({ hasText: question.chapter })
+    .first()
+    .click();
+  await expect(contents).toHaveCount(0);
+  await expect(card(page, firstInChapter.id)).toBeAttached();
+  await settled(page);
+  for (let step = 0; step < 45; step++) {
+    if (await card(page, id).count()) {
+      await card(page, id).scrollIntoViewIfNeeded();
+      await settled(page);
+      return;
+    }
+    await page.evaluate(async () => {
+      scrollBy(0, 450);
+      await new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      );
+    });
+  }
+  await expect(
+    card(page, id),
+    `question ${id} remains reachable by continuous scrolling`,
+  ).toBeAttached();
+}
 
 const firstId = "jp-kana-001-p012-q01";
 const card = (page: Page, id = firstId) => page.locator(`[data-qid="${id}"]`);
 async function start(page: Page) {
   await page.goto("/");
-  await expect(page.locator("[data-qid]")).toHaveCount(1496);
+  await expect(page.locator(".questions")).toHaveAttribute(
+    "data-question-count",
+    "1496",
+  );
+  await expect(card(page)).toBeAttached();
+  await settled(page);
+  expect(await page.locator("[data-qid]").count()).toBeLessThanOrEqual(40);
 }
 async function close(page: Page) {
   await page
@@ -21,7 +75,7 @@ async function settings(page: Page) {
   return page.getByRole("dialog", { name: "設定・データ管理" });
 }
 
-test("all source questions render; red terms toggle independently and blank popup uses corresponding answer", async ({
+test("source total stays complete while visible red terms toggle independently and blanks retain their answer", async ({
   page,
 }) => {
   await start(page);
@@ -61,7 +115,7 @@ test("mistake events persist individually and counter changes preserve scroll", 
 }) => {
   await start(page);
   const q = card(page, "jp-kana-001-p014-c02-q03");
-  await q.scrollIntoViewIfNeeded();
+  await navigate(page, "jp-kana-001-p014-c02-q03");
   await q.getByRole("button", { name: "間違いを1回記録", exact: true }).click();
   const y = await page.evaluate(() => scrollY);
   await q.getByRole("button", { name: "間違いを1回記録", exact: true }).click();
@@ -88,7 +142,7 @@ test("filter retains current anchor; marked questions bypass mistake conditions;
   await start(page);
   const id = "jp-kana-001-p026-c06-q01";
   const q = card(page, id);
-  await q.scrollIntoViewIfNeeded();
+  await navigate(page, id);
   await q.getByRole("button", { name: "注意マーク" }).click();
   await page.waitForTimeout(500);
   const top = await q.evaluate((e) => e.getBoundingClientRect().top);
@@ -96,25 +150,39 @@ test("filter retains current anchor; marked questions bypass mistake conditions;
   await modal.getByLabel("時代", { exact: true }).selectOption("古墳時代");
   await modal.getByRole("button", { name: "この条件で表示" }).click();
   await expect(q).toHaveCount(1);
-  expect(
-    Math.abs((await q.evaluate((e) => e.getBoundingClientRect().top)) - top),
-  ).toBeLessThan(4);
+  await settled(page);
+  await expect
+    .poll(async () =>
+      Math.abs((await q.evaluate((e) => e.getBoundingClientRect().top)) - top),
+    )
+    .toBeLessThan(4);
   modal = await filters(page);
   await modal.getByLabel("間違い回数（以上）").fill("99");
   await modal.getByLabel("注意マーク「！」").selectOption("include");
   await modal.getByRole("button", { name: "この条件で表示" }).click();
+  await expect(page.locator(".questions")).toHaveAttribute(
+    "data-question-count",
+    "1",
+  );
+  await settled(page);
   await expect(page.locator("[data-qid]")).toHaveCount(1);
-  await expect(q).toBeVisible();
+  await expect(q).toBeInViewport();
   modal = await filters(page);
   await modal.getByRole("button", { name: "条件をリセット" }).click();
   await modal.getByRole("button", { name: "この条件で表示" }).click();
-  await expect(page.locator("[data-qid]")).toHaveCount(1496);
-  await expect(q).toBeVisible();
+  await expect(page.locator(".questions")).toHaveAttribute(
+    "data-question-count",
+    "1496",
+  );
+  await settled(page);
+  expect(await page.locator("[data-qid]").count()).toBeLessThanOrEqual(40);
+  await expect(q).toBeInViewport();
   modal = await filters(page);
   await modal.getByLabel("時代", { exact: true }).selectOption("原始時代");
   await modal.getByRole("button", { name: "この条件で表示" }).click();
   await expect(q).toHaveCount(0);
-  await expect(card(page, "jp-kana-001-p023-c04-q16")).toBeVisible();
+  await settled(page);
+  await expect(card(page, "jp-kana-001-p023-c04-q16")).toBeInViewport();
 });
 
 test("editor persists text overlay and retains original and history", async ({
@@ -196,11 +264,17 @@ test("individual answers hide only after distant scrolling and bulk answers stay
   await first.locator(".blank").click();
   await page.evaluate(() => window.scrollBy(0, 100));
   await expect(red).toHaveAttribute("aria-pressed", "true");
-  await card(page, "jp-kana-001-p026-c06-q01").scrollIntoViewIfNeeded();
-  await expect(red).toHaveAttribute("aria-pressed", "false");
+  await navigate(page, "jp-kana-001-p026-c06-q01");
+  await expect(first).toHaveCount(0);
   await expect(page.getByRole("tooltip")).toHaveCount(0);
+  await navigate(page, firstId);
+  await expect(red).toHaveAttribute("aria-pressed", "false");
   await page.getByRole("button", { name: "すべて表示", exact: true }).click();
-  await first.scrollIntoViewIfNeeded();
+  await navigate(page, "jp-kana-001-p026-c06-q01");
+  await expect(
+    card(page, "jp-kana-001-p026-c06-q01").locator(".blank").first(),
+  ).toHaveClass(/bulk-visible/);
+  await navigate(page, firstId);
   await expect(red).toHaveAttribute("aria-pressed", "true");
   await page.reload();
   await expect(red).toHaveAttribute("aria-pressed", "false");

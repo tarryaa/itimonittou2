@@ -1,0 +1,257 @@
+{
+  "measuredAt": "2026-10-27T23:49:15.136Z",
+  "repeatCount": 3,
+  "configuration": {
+    "browser": "Chromium",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "cpuThrottle": 4,
+    "serviceWorkers": "blocked to isolate main-thread work",
+    "network": "local static server, no throttling",
+    "actions": "synthetic DOM click to rendered confirmation plus two animation frames; automation DOM-search overhead excluded",
+    "dist": "/workspace/scratch/history-performance-before-dist"
+  },
+  "summary": {
+    "initialReadyMedianMs": 7253.9,
+    "domElementsMedian": 53722,
+    "mountedQuestionsMedian": 1496,
+    "bulkShowMedianMs": 1479.7,
+    "bulkHideMedianMs": 2115.9,
+    "addMistakeMedianMs": 326.5,
+    "scrollP95GapMedianMs": 105.3,
+    "scrollGapsOver50msMedian": 12,
+    "heapUsedMedianBytes": 44700000
+  },
+  "samples": [
+    {
+      "measuredAt": "2026-10-27T23:48:44.786Z",
+      "configuration": {
+        "browser": "Chromium",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "cpuThrottle": 4,
+        "serviceWorkers": "blocked to isolate main-thread work",
+        "network": "local static server, no throttling",
+        "actions": "synthetic DOM click to rendered confirmation plus two animation frames; automation DOM-search overhead excluded",
+        "dist": "/workspace/scratch/history-performance-before-dist"
+      },
+      "initial": {
+        "pageTime": 7826.2,
+        "nodes": 53722,
+        "mountedQuestions": 1496,
+        "bodyScrollHeight": 365601,
+        "heap": {
+          "used": 44700000,
+          "total": 64000000
+        },
+        "wallToReadyMs": 7866.1,
+        "longTaskCount": 6,
+        "longTaskTotalMs": 2278,
+        "maxLongTaskMs": 1284
+      },
+      "actions": [
+        {
+          "label": "bulk show",
+          "elapsedMs": 1480.6,
+          "longTaskCount": 1,
+          "longTaskTotalMs": 736,
+          "maxLongTaskMs": 736
+        },
+        {
+          "label": "bulk hide",
+          "elapsedMs": 2115.9,
+          "longTaskCount": 2,
+          "longTaskTotalMs": 1427,
+          "maxLongTaskMs": 971
+        },
+        {
+          "label": "add mistake",
+          "elapsedMs": 326.5,
+          "longTaskCount": 1,
+          "longTaskTotalMs": 228,
+          "maxLongTaskMs": 228
+        }
+      ],
+      "scroll": {
+        "durationMs": 2552.9,
+        "frames": 89,
+        "p95FrameGapMs": 105.3,
+        "maxFrameGapMs": 151.2,
+        "gapsOver50ms": 12,
+        "maximumMountedQuestions": 1496,
+        "scrollY": 6230
+      },
+      "scrollSettle": {
+        "observationMs": 761.3,
+        "longTaskCount": 1,
+        "longTaskTotalMs": 50,
+        "maxLongTaskMs": 50
+      },
+      "final": {
+        "nodes": 53722,
+        "mountedQuestions": 1496,
+        "heap": {
+          "used": 44700000,
+          "total": 64000000
+        }
+      },
+      "jsErrors": []
+    },
+    {
+      "measuredAt": "2026-10-27T23:48:59.766Z",
+      "configuration": {
+        "browser": "Chromium",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "cpuThrottle": 4,
+        "serviceWorkers": "blocked to isolate main-thread work",
+        "network": "local static server, no throttling",
+        "actions": "synthetic DOM click to rendered confirmation plus two animation frames; automation DOM-search overhead excluded",
+        "dist": "/workspace/scratch/history-performance-before-dist"
+      },
+      "initial": {
+        "pageTime": 7178.8,
+        "nodes": 53722,
+        "mountedQuestions": 1496,
+        "bodyScrollHeight": 365601,
+        "heap": {
+          "used": 44700000,
+          "total": 64000000
+        },
+        "wallToReadyMs": 7206.3,
+        "longTaskCount": 7,
+        "longTaskTotalMs": 6606,
+        "maxLongTaskMs": 4397
+      },
+      "actions": [
+        {
+          "label": "bulk show",
+          "elapsedMs": 1479.7,
+          "longTaskCount": 1,
+          "longTaskTotalMs": 752,
+          "maxLongTaskMs": 752
+        },
+        {
+          "label": "bulk hide",
+          "elapsedMs": 1968.3,
+          "longTaskCount": 2,
+          "longTaskTotalMs": 1278,
+          "maxLongTaskMs": 857
+        },
+        {
+          "label": "add mistake",
+          "elapsedMs": 257.2,
+          "longTaskCount": 1,
+          "longTaskTotalMs": 153,
+          "maxLongTaskMs": 153
+        }
+      ],
+      "scroll": {
+        "durationMs": 2501.7,
+        "frames": 99,
+        "p95FrameGapMs": 90.4,
+        "maxFrameGapMs": 101,
+        "gapsOver50ms": 15,
+        "maximumMountedQuestions": 1496,
+        "scrollY": 6930
+      },
+      "scrollSettle": {
+        "observationMs": 751.3,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "maxLongTaskMs": 0
+      },
+      "final": {
+        "nodes": 53722,
+        "mountedQuestions": 1496,
+        "heap": {
+          "used": 44700000,
+          "total": 64000000
+        }
+      },
+      "jsErrors": []
+    },
+    {
+      "measuredAt": "2026-10-27T23:49:15.092Z",
+      "configuration": {
+        "browser": "Chromium",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "cpuThrottle": 4,
+        "serviceWorkers": "blocked to isolate main-thread work",
+        "network": "local static server, no throttling",
+        "actions": "synthetic DOM click to rendered confirmation plus two animation frames; automation DOM-search overhead excluded",
+        "dist": "/workspace/scratch/history-performance-before-dist"
+      },
+      "initial": {
+        "pageTime": 7224.4,
+        "nodes": 53722,
+        "mountedQuestions": 1496,
+        "bodyScrollHeight": 365601,
+        "heap": {
+          "used": 44700000,
+          "total": 64000000
+        },
+        "wallToReadyMs": 7253.9,
+        "longTaskCount": 6,
+        "longTaskTotalMs": 6600,
+        "maxLongTaskMs": 4575
+      },
+      "actions": [
+        {
+          "label": "bulk show",
+          "elapsedMs": 1414.6,
+          "longTaskCount": 1,
+          "longTaskTotalMs": 699,
+          "maxLongTaskMs": 699
+        },
+        {
+          "label": "bulk hide",
+          "elapsedMs": 2162.5,
+          "longTaskCount": 2,
+          "longTaskTotalMs": 1480,
+          "maxLongTaskMs": 1069
+        },
+        {
+          "label": "add mistake",
+          "elapsedMs": 335.7,
+          "longTaskCount": 1,
+          "longTaskTotalMs": 234,
+          "maxLongTaskMs": 234
+        }
+      ],
+      "scroll": {
+        "durationMs": 2544.1,
+        "frames": 89,
+        "p95FrameGapMs": 110.6,
+        "maxFrameGapMs": 156.7,
+        "gapsOver50ms": 12,
+        "maximumMountedQuestions": 1496,
+        "scrollY": 6230
+      },
+      "scrollSettle": {
+        "observationMs": 759.4,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "maxLongTaskMs": 0
+      },
+      "final": {
+        "nodes": 53722,
+        "mountedQuestions": 1496,
+        "heap": {
+          "used": 44700000,
+          "total": 64000000
+        }
+      },
+      "jsErrors": []
+    }
+  ]
+}

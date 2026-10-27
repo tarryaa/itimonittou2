@@ -98,6 +98,13 @@ export function filterQuestions(
   now: Date = new Date(),
 ): StudyQuestion[] {
   const f = state.filters;
+  if (
+    Object.entries(defaultFilters).every(
+      ([key, value]) => f[key as keyof Filters] === value,
+    )
+  )
+    return questions;
+  const needsHistory = f.minMistakes > 0 || f.period !== "";
   const questionIndex = new Map(questions.map((q) => [q.id, q]));
   const counts = new Map<string, number>();
   const recent = new Set<string>();
@@ -106,7 +113,7 @@ export function filterQuestions(
   const todayEpoch = Date.parse(`${today}T00:00:00+09:00`);
   const cutoff =
     f.period === "7" ? todayEpoch - 6 * 86400000 : todayEpoch - 29 * 86400000;
-  for (const event of state.mistakes) {
+  for (const event of needsHistory ? state.mistakes : []) {
     counts.set(event.questionId, (counts.get(event.questionId) ?? 0) + 1);
     const time = Date.parse(event.at);
     const inPeriod =

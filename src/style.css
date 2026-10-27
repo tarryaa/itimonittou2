@@ -1365,3 +1365,11 @@ hr {
     font-size: 11px;
   }
 }
+
+/* Virtual rows own scroll anchoring; disable the browser's competing automatic anchor. */
+.virtual-book {
+  overflow-anchor: none;
+}
+.virtual-row {
+  contain: layout style;
+}

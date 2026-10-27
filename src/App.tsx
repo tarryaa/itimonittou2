@@ -56,6 +56,7 @@ import Editor from "./Editor";
 import { Segments } from "./Segments";
 import { registerPwa } from "./pwa";
 import TableContent from "./TableContent";
+import VirtualBook, { type BookHandle } from "./VirtualBook";
 
 const uid = () => crypto.randomUUID();
 function documentPosition(): Position | undefined {
@@ -86,7 +87,7 @@ function ExtraContent({ extra, all }: { extra: PageExtra; all: boolean }) {
   const ref = useRef<HTMLElement>(null);
   const [revealed, setRevealed] = useState(new Set<string>());
   useEffect(() => {
-    if (!all) setRevealed(new Set());
+    if (!all) setRevealed((old) => (old.size ? new Set() : old));
   }, [all]);
   useEffect(() => {
     if (all || !revealed.size) return;
@@ -143,7 +144,7 @@ const QuestionCard = memo(function QuestionCard({
   const q = edit?.question ?? item.source;
   const answers = edit?.answers ?? item.answers;
   useEffect(() => {
-    if (!all) setRevealed(new Set());
+    if (!all) setRevealed((old) => (old.size ? new Set() : old));
   }, [all, edit]);
   useEffect(() => {
     if (all || !revealed.size) return;
@@ -333,6 +334,7 @@ export default function App() {
   const [all, setAll] = useState(false);
   const [current, setCurrent] = useState("");
   const pending = useRef<Position | undefined>(undefined);
+  const book = useRef<BookHandle>(null);
   const initialized = useRef(false);
   const [draftFilters, setDraftFilters] = useState<Filters>({
     ...defaultFilters,
@@ -353,7 +355,25 @@ export default function App() {
     const next = fn(old);
     stateRef.current = next;
     // Journal synchronously before rendering confirmation, then commit to IndexedDB.
-    void saveState(next).catch((e) => setError(`保存できませんでした: ${e}`));
+    const changed: ("edits" | "learning" | "preferences")[] = [];
+    if (next.edits !== old.edits) changed.push("edits");
+    if (
+      next.mistakes !== old.mistakes ||
+      next.flags !== old.flags ||
+      next.tags !== old.tags ||
+      next.sessions !== old.sessions
+    )
+      changed.push("learning");
+    if (
+      next.position !== old.position ||
+      next.filters !== old.filters ||
+      next.settings !== old.settings
+    )
+      changed.push("preferences");
+    if (changed.length)
+      void saveState(next, { changed }).catch((e) =>
+        setError(`保存できませんでした: ${e}`),
+      );
     setState(next);
   }, []);
   useEffect(() => {
@@ -466,14 +486,12 @@ export default function App() {
         filtered[0] ?? ({ order: 0, id: "" } as StudyQuestion),
       ).id;
     }
-    const el = Array.from(
-      document.querySelectorAll<HTMLElement>("[data-qid]"),
-    ).find((e) => e.dataset.qid === id);
-    if (el) {
-      window.scrollBy(0, el.getBoundingClientRect().top - anchor.offset);
-      setCurrent(id);
-    }
-  }, [filtered, data, state?.settings.fontSize]);
+    book.current?.restore({
+      id,
+      offset: id === anchor.id ? anchor.offset : 150,
+    });
+    setCurrent(id);
+  }, [filtered, data, state?.settings.fontSize, state?.filters, state?.edits]);
   useEffect(() => {
     if (!initialized.current) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -482,8 +500,11 @@ export default function App() {
       timer = setTimeout(() => {
         const p = capture();
         if (!p) return;
+        if (book.current?.isRestoring()) return;
         setCurrent(p.id);
-        updateState((s) => ({
+        const s = stateRef.current;
+        if (!s) return;
+        const next = {
           ...s,
           position: p,
           sessions: s.sessions.map((session) =>
@@ -491,14 +512,21 @@ export default function App() {
               ? { ...session, viewed: [...session.viewed, p.id] }
               : session,
           ),
-        }));
+        };
+        stateRef.current = next;
+        // Scrolling saves only the small preference record, without rendering the app.
+        void saveState(next, { changed: ["preferences"] }).catch((e) =>
+          setError(`保存できませんでした: ${e}`),
+        );
       }, 180);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("bookpositionchange", onScroll);
     onScroll();
     return () => {
       clearTimeout(timer);
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("bookpositionchange", onScroll);
     };
   }, [!!state, capture, updateState]);
   const action = useCallback(
@@ -626,9 +654,92 @@ export default function App() {
     }
   }
 
+  const activeFilter = useMemo(
+    () =>
+      state
+        ? Object.entries(state.filters).filter(
+            ([k, v]) => v !== defaultFilters[k as keyof Filters],
+          ).length
+        : 0,
+    [state?.filters],
+  );
+  const emptyPages = useMemo(() => {
+    if (!data) return [];
+    const occupied = new Set(data.questions.map((q) => q.page_id));
+    return data.pages.filter((p) => !occupied.has(p.id));
+  }, [data]);
+  const renderRow = useCallback(
+    (q: StudyQuestion, i: number) => {
+      if (!state || !data) return null;
+      return (
+        <>
+          {(!i || q.chapter !== filtered[i - 1].chapter) && (
+            <h2 className="chapter-heading">
+              <span>{q.era}</span>
+              {q.chapter}
+            </h2>
+          )}
+          <QuestionCard
+            item={q}
+            edit={state.edits[q.id]}
+            count={counts.get(q.id) ?? 0}
+            flagged={!!state.flags[q.id]}
+            all={all}
+            onAction={action}
+          />
+          {!activeFilter &&
+            (!filtered[i + 1] || filtered[i + 1].pageNumber > q.pageNumber) &&
+            emptyPages
+              .filter(
+                (p) =>
+                  p.page_number > q.pageNumber &&
+                  p.page_number < (filtered[i + 1]?.pageNumber ?? Infinity),
+              )
+              .map((p) => (
+                <section key={p.id} className="empty-page">
+                  <h3>
+                    p.{p.page_number} {p.chapter}
+                  </h3>
+                  {data.page_extras
+                    ?.filter((e) => e.page_id === p.id)
+                    .map((e) => (
+                      <ExtraContent extra={e} key={e.id} all={all} />
+                    ))}
+                  {data.tables
+                    ?.filter((t) => t.page_id === p.id)
+                    .map((t) => (
+                      <TableContent
+                        table={t}
+                        key={t.id}
+                        all={all}
+                        answers={data.answers}
+                      />
+                    ))}
+                  {!data.page_extras?.some((e) => e.page_id === p.id) && (
+                    <p className="muted">
+                      このページの本文は教材JSONに収録されていません。
+                    </p>
+                  )}
+                </section>
+              ))}
+        </>
+      );
+    },
+    [
+      data,
+      filtered,
+      state?.edits,
+      state?.flags,
+      counts,
+      all,
+      action,
+      activeFilter,
+      emptyPages,
+    ],
+  );
   const audit = useMemo(
-    () => (data ? validateDataset(data) : undefined),
-    [data],
+    () => (data && panel === "audit" ? validateDataset(data) : undefined),
+    [data, panel],
   );
   if (!state || !data)
     return (
@@ -638,12 +749,6 @@ export default function App() {
         <p>{error || "教材と学習記録を読み込んでいます…"}</p>
       </div>
     );
-  const activeFilter = Object.entries(state.filters).filter(
-    ([k, v]) => v !== defaultFilters[k as keyof Filters],
-  ).length;
-  const emptyPages = data.pages.filter(
-    (p) => !data.questions.some((q) => q.page_id === p.id),
-  );
   return (
     <>
       <header className="app-header">
@@ -713,75 +818,25 @@ export default function App() {
           <span>{currentQ?.era}</span>
           <small>{currentQ?.chapter}</small>
         </aside>
-        <div className="questions" aria-label="教材一覧">
-          {!filtered.length && (
-            <div className="empty">
-              <Search />
-              <h2>該当する問題がありません</h2>
-              <p>条件を少し広げてみましょう。</p>
-              <button
-                className="primary"
-                onClick={() => applyFilters({ ...defaultFilters })}
-              >
-                絞り込みを解除
-              </button>
-            </div>
-          )}
-          {filtered.map((q, i) => (
-            <div key={q.id}>
-              {(!i || q.chapter !== filtered[i - 1].chapter) && (
-                <h2 className="chapter-heading">
-                  <span>{q.era}</span>
-                  {q.chapter}
-                </h2>
-              )}
-              <QuestionCard
-                item={q}
-                edit={state.edits[q.id]}
-                count={counts.get(q.id) ?? 0}
-                flagged={!!state.flags[q.id]}
-                all={all}
-                onAction={action}
-              />
-              {!activeFilter &&
-                (!filtered[i + 1] ||
-                  filtered[i + 1].pageNumber > q.pageNumber) &&
-                emptyPages
-                  .filter(
-                    (p) =>
-                      p.page_number > q.pageNumber &&
-                      p.page_number < (filtered[i + 1]?.pageNumber ?? Infinity),
-                  )
-                  .map((p) => (
-                    <section key={p.id} className="empty-page">
-                      <h3>
-                        p.{p.page_number} {p.chapter}
-                      </h3>
-                      {data.page_extras
-                        ?.filter((e) => e.page_id === p.id)
-                        .map((e) => (
-                          <ExtraContent extra={e} key={e.id} all={all} />
-                        ))}
-                      {data.tables
-                        ?.filter((t) => t.page_id === p.id)
-                        .map((t) => (
-                          <TableContent
-                            table={t}
-                            key={t.id}
-                            all={all}
-                            answers={data.answers}
-                          />
-                        ))}
-                      {!data.page_extras?.some((e) => e.page_id === p.id) && (
-                        <p className="muted">
-                          このページの本文は教材JSONに収録されていません。
-                        </p>
-                      )}
-                    </section>
-                  ))}
-            </div>
-          ))}
-        </div>
+        {!filtered.length && (
+          <div className="empty">
+            <Search />
+            <h2>該当する問題がありません</h2>
+            <p>条件を少し広げてみましょう。</p>
+            <button
+              className="primary"
+              onClick={() => applyFilters({ ...defaultFilters })}
+            >
+              絞り込みを解除
+            </button>
+          </div>
+        )}
+        <VirtualBook
+          ref={book}
+          items={filtered}
+          renderRow={renderRow}
+          layoutKey={state.settings.fontSize}
+        />
         <p className="end-note">ここまでの積み重ねを、明日につなげよう。</p>
       </main>
       <nav className="bottom-nav" aria-label="学習操作">
@@ -805,6 +860,7 @@ export default function App() {
         <button
           onClick={() => {
             setTarget("");
+            setState(stateRef.current);
             setPanel("history");
           }}
         >
@@ -1259,7 +1315,7 @@ export default function App() {
             onClick={() =>
               download(
                 `日本史の栞-backup-${new Date().toISOString().slice(0, 10)}.json`,
-                exportBackup(data, state),
+                exportBackup(data, stateRef.current!),
               )
             }
           >
@@ -1330,7 +1386,8 @@ export default function App() {
             ブラウザに保存領域の保護をリクエスト
           </button>
           <p className="muted">
-            日本史の栞 v1.0 · 教材 {data.dataset_version || data.schema_version}
+            日本史の栞 v1.1.0 · 教材{" "}
+            {data.dataset_version || data.schema_version}
           </p>
         </Modal>
       )}

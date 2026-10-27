@@ -43,42 +43,121 @@ export const BACKUP_FORMAT = "itimonittou-backup";
 export const BACKUP_VERSION = 1;
 export const EMERGENCY_JOURNAL_KEY = "itimonittou-pending-state-v1";
 
-/** A small synchronous safety copy closes the gap before an IndexedDB commit. */
-function writeEmergencyJournal(state: UserState): string | undefined {
+export type StateSlice = "edits" | "learning" | "preferences";
+export const EMERGENCY_SLICE_KEYS: Record<StateSlice, string> = {
+  edits: "itimonittou-pending-edits-v2",
+  learning: "itimonittou-pending-learning-v2",
+  preferences: "itimonittou-pending-preferences-v2",
+};
+const stateSlices: StateSlice[] = ["edits", "learning", "preferences"];
+export interface SaveOptions {
+  changed: StateSlice[];
+}
+
+function readJournal(key: string): string | undefined {
+  try {
+    return typeof localStorage === "undefined"
+      ? undefined
+      : (localStorage.getItem(key) ?? undefined);
+  } catch {
+    return;
+  }
+}
+function clearJournal(key: string, journal: string | undefined): void {
+  if (!journal) return;
+  try {
+    // Only this revision can be removed. A newer synchronous save may be waiting.
+    if (localStorage.getItem(key) === journal) localStorage.removeItem(key);
+  } catch {
+    /* An already committed copy can safely be replayed at startup. */
+  }
+}
+function writeJournal(slice: StateSlice, value: unknown): string | undefined {
   try {
     if (typeof localStorage === "undefined") return;
     const journal = JSON.stringify({
-      format: "itimonittou-pending-state",
-      version: 1,
+      format: "itimonittou-pending-slice",
+      version: 2,
       revision: `${Date.now()}-${Math.random()}`,
-      state,
+      slice,
+      value,
     });
-    localStorage.setItem(EMERGENCY_JOURNAL_KEY, journal);
+    localStorage.setItem(EMERGENCY_SLICE_KEYS[slice], journal);
     return journal;
   } catch {
-    // Storage restrictions or quota must not prevent the primary IDB write.
-    return;
+    return; /* The IndexedDB write still proceeds if quota is unavailable. */
   }
 }
-
-function clearEmergencyJournal(journal: string | undefined): void {
-  if (!journal) return;
-  try {
-    // An older queued commit must never remove a newer pending state.
-    if (localStorage.getItem(EMERGENCY_JOURNAL_KEY) === journal)
-      localStorage.removeItem(EMERGENCY_JOURNAL_KEY);
-  } catch {
-    // IDB has already committed; a leftover copy is safe to replay.
-  }
+function sliceValue(state: UserState, slice: StateSlice): unknown {
+  if (slice === "edits") return state.edits;
+  if (slice === "learning")
+    return {
+      mistakes: state.mistakes,
+      sessions: state.sessions,
+      flags: state.flags,
+      tags: state.tags,
+    };
+  return {
+    filters: state.filters,
+    position: state.position,
+    settings: state.settings,
+    // This bounded copy protects newly viewed questions without rewriting mistakes.
+    sessionProgress: state.sessions.length
+      ? {
+          id: state.sessions[state.sessions.length - 1].id,
+          viewed: state.sessions[state.sessions.length - 1].viewed,
+        }
+      : undefined,
+  };
 }
-
-function readEmergencyJournal(): string | undefined {
-  try {
-    if (typeof localStorage === "undefined") return;
-    return localStorage.getItem(EMERGENCY_JOURNAL_KEY) ?? undefined;
-  } catch {
-    return;
+function applyPreferences(
+  state: UserState,
+  value: unknown,
+  questionIds?: Set<string>,
+): UserState {
+  check(object(value), "保存設定の形式が不正です。");
+  const next: UserState = {
+    ...state,
+    filters: value.filters ?? state.filters,
+    settings: value.settings ?? state.settings,
+    ...(Object.hasOwn(value, "position") ? { position: value.position } : {}),
+  };
+  const progress = value.sessionProgress;
+  if (progress !== undefined) {
+    check(
+      object(progress) &&
+        typeof progress.id === "string" &&
+        Array.isArray(progress.viewed) &&
+        progress.viewed.every(
+          (id: unknown) =>
+            typeof id === "string" && (!questionIds || questionIds.has(id)),
+        ),
+      "閲覧履歴の形式または問題IDが不正です。",
+    );
+    check(
+      next.sessions.some((session) => session.id === progress.id),
+      "閲覧履歴のセッションがありません。",
+    );
+    next.sessions = next.sessions.map((session) =>
+      session.id === progress.id
+        ? {
+            ...session,
+            viewed: [...new Set([...session.viewed, ...progress.viewed])],
+          }
+        : session,
+    );
   }
+  return next;
+}
+function applySlice(
+  state: UserState,
+  slice: StateSlice,
+  value: unknown,
+): UserState {
+  if (slice === "edits")
+    return { ...state, edits: value as UserState["edits"] };
+  if (slice === "preferences") return applyPreferences(state, value);
+  return { ...state, ...(value as object) };
 }
 
 export function emptyState(): UserState {
@@ -124,33 +203,29 @@ function enqueue<T>(operation: () => Promise<T>): Promise<T> {
   return result;
 }
 
-async function putState(db: IDBPDatabase, state: UserState) {
-  const tx = db.transaction(["edits", "learning", "preferences"], "readwrite");
-  await Promise.all([
-    tx.objectStore("edits").put(state.edits, "current"),
-    tx.objectStore("learning").put(
-      {
-        mistakes: state.mistakes,
-        sessions: state.sessions,
-        flags: state.flags,
-        tags: state.tags,
-      },
-      "current",
-    ),
-    tx.objectStore("preferences").put(
-      {
-        filters: state.filters,
-        position: state.position,
-        settings: state.settings,
-      },
-      "current",
-    ),
-  ]);
+async function putSlices(
+  db: IDBPDatabase,
+  values: Partial<Record<StateSlice, unknown>>,
+) {
+  const slices = stateSlices.filter((slice) => Object.hasOwn(values, slice));
+  if (!slices.length) return;
+  const tx = db.transaction(slices, "readwrite");
+  await Promise.all(
+    slices.map((slice) => tx.objectStore(slice).put(values[slice], "current")),
+  );
   await tx.done;
+}
+async function putState(db: IDBPDatabase, state: UserState) {
+  await putSlices(
+    db,
+    Object.fromEntries(
+      stateSlices.map((slice) => [slice, sliceValue(state, slice)]),
+    ),
+  );
 }
 
 export async function loadAppData(initial: Dataset): Promise<AppData> {
-  await writeQueue;
+  await writeQueue.catch(() => undefined);
   const db = await database();
   const [stored, edits, learning, preferences] = await Promise.all([
     db.get("originals", "current"),
@@ -163,19 +238,40 @@ export async function loadAppData(initial: Dataset): Promise<AppData> {
     dataset = initial;
     await db.put("originals", initial, "current");
   }
-  const state: UserState = {
+  let state: UserState = {
     ...emptyState(),
     ...learning,
-    ...preferences,
     edits: edits ?? {},
     filters: { ...defaultFilters, ...preferences?.filters },
     settings: { fontSize: 17, ...preferences?.settings },
+    ...(preferences?.position !== undefined
+      ? { position: preferences.position }
+      : {}),
   };
-  const journal = readEmergencyJournal();
-  if (journal) {
-    let recovered: UserState | undefined;
+  const mergeStoredProgress = (candidate: UserState): UserState => {
+    if (preferences?.sessionProgress === undefined) return candidate;
     try {
-      const pending = JSON.parse(journal);
+      return applyPreferences(
+        candidate,
+        { sessionProgress: preferences.sessionProgress },
+        new Set(dataset.questions.map((q) => q.id)),
+      );
+    } catch (error) {
+      console.warn("閲覧履歴を検証できませんでした", error);
+      return candidate;
+    }
+  };
+  // Version 1 saved a complete state. Upgrade it without altering the original.
+  const legacy = readJournal(EMERGENCY_JOURNAL_KEY);
+  const pendingSlices = stateSlices.map((slice) => ({
+    slice,
+    journal: readJournal(EMERGENCY_SLICE_KEYS[slice]),
+  }));
+  let recovered = state;
+  let hasRecovery = false;
+  try {
+    if (legacy) {
+      const pending = JSON.parse(legacy);
       check(
         object(pending) &&
           pending.format === "itimonittou-pending-state" &&
@@ -189,29 +285,75 @@ export async function loadAppData(initial: Dataset): Promise<AppData> {
         dataset,
         state: pending.state,
       }).state;
-    } catch (error) {
-      // Keep the existing database and source untouched if recovery is invalid.
-      console.warn("緊急保存データを検証できませんでした", error);
+      hasRecovery = true;
     }
-    if (recovered) {
-      await enqueue(async () => putState(db, recovered!));
-      clearEmergencyJournal(journal);
+    for (const { slice, journal } of pendingSlices) {
+      if (!journal) continue;
+      const pending = JSON.parse(journal);
+      check(
+        object(pending) &&
+          pending.format === "itimonittou-pending-slice" &&
+          pending.version === 2 &&
+          pending.slice === slice &&
+          typeof pending.revision === "string",
+        "緊急保存データの形式が不正です。",
+      );
+      recovered = applySlice(recovered, slice, pending.value);
+      hasRecovery = true;
+    }
+    if (hasRecovery) {
+      recovered = mergeStoredProgress(recovered);
+      recovered = validateBackup({
+        format: BACKUP_FORMAT,
+        version: BACKUP_VERSION,
+        dataset,
+        state: recovered,
+      }).state;
+      await enqueue(async () => putState(db, recovered));
+      clearJournal(EMERGENCY_JOURNAL_KEY, legacy);
+      for (const { slice, journal } of pendingSlices)
+        clearJournal(EMERGENCY_SLICE_KEYS[slice], journal);
       return { dataset, state: recovered };
     }
+  } catch (error) {
+    // Invalid recovery must never replace existing source or learning records.
+    console.warn("緊急保存データを検証できませんでした", error);
   }
-  return { dataset, state };
+  return { dataset, state: mergeStoredProgress(state) };
 }
 
-export function saveState(state: UserState): Promise<void> {
-  // Snapshot at call time, before the async queue yields to later UI events.
-  const snapshot = structuredClone(state);
-  const previousJournal = readEmergencyJournal();
-  const journal = writeEmergencyJournal(snapshot);
+/** Explicit changed slices let high-frequency position saves avoid cloning history and edits.
+ * Without options every field is snapshotted, including mutable callers supported by backups. */
+export function saveState(
+  state: UserState,
+  options?: SaveOptions,
+): Promise<void> {
+  const changed = options ? [...new Set(options.changed)] : stateSlices;
+  const values: Partial<Record<StateSlice, unknown>> = {};
+  const journals: Array<{
+    slice: StateSlice;
+    previous?: string;
+    written?: string;
+  }> = [];
+  for (const slice of changed) {
+    values[slice] = structuredClone(sliceValue(state, slice));
+    const previous = readJournal(EMERGENCY_SLICE_KEYS[slice]);
+    journals.push({
+      slice,
+      previous,
+      written: writeJournal(slice, values[slice]),
+    });
+  }
+  const legacy =
+    changed.length === stateSlices.length
+      ? readJournal(EMERGENCY_JOURNAL_KEY)
+      : undefined;
   return enqueue(async () => {
-    await putState(await database(), snapshot);
-    // A quota-blocked replacement must not leave an old recovery copy that
-    // would roll back this successfully committed state on the next launch.
-    clearEmergencyJournal(journal ?? previousJournal);
+    await putSlices(await database(), values);
+    for (const { slice, previous, written } of journals)
+      clearJournal(EMERGENCY_SLICE_KEYS[slice], written ?? previous);
+    // A committed complete state supersedes any pending copy from the old app.
+    clearJournal(EMERGENCY_JOURNAL_KEY, legacy);
   });
 }
 
@@ -392,6 +534,10 @@ export function validateBackup(input: unknown): AppData {
 /** The UI must display a preview and ask the user to confirm before calling this. */
 export function restoreBackup(input: unknown): Promise<AppData> {
   const checked = validateBackup(input);
+  const beforeJournals = [
+    EMERGENCY_JOURNAL_KEY,
+    ...Object.values(EMERGENCY_SLICE_KEYS),
+  ].map((key) => ({ key, journal: readJournal(key) }));
   return enqueue(async () => {
     const db = await database();
     // Retain the previous complete state in the same transaction as replacement.
@@ -429,6 +575,7 @@ export function restoreBackup(input: unknown): Promise<AppData> {
       ),
     ]);
     await tx.done;
+    for (const { key, journal } of beforeJournals) clearJournal(key, journal);
     return checked;
   });
 }
@@ -563,12 +710,16 @@ export async function recoverBeforeRestore(): Promise<AppData> {
   const db = await database();
   const snapshot = await db.get("snapshots", "beforeRestore");
   check(snapshot?.dataset, "復元前のデータがありません。");
-  const state = {
+  const base = {
     ...emptyState(),
     ...snapshot.learning,
-    ...snapshot.preferences,
     edits: snapshot.edits ?? {},
   };
+  const state = applyPreferences(
+    base,
+    snapshot.preferences ?? {},
+    new Set((snapshot.dataset as Dataset).questions.map((q) => q.id)),
+  );
   return restoreBackup({
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
