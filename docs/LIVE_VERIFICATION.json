@@ -1,0 +1,93 @@
+[
+  {
+    "browser": "chromium",
+    "http": 200,
+    "questions": 1496,
+    "assets": {
+      "statuses": [
+        {
+          "url": "https://tarryaa.github.io/itimonittou2/manifest.webmanifest",
+          "status": 200
+        },
+        {
+          "url": "https://tarryaa.github.io/itimonittou2/icons/apple-touch-icon.png",
+          "status": 200
+        },
+        {
+          "url": "https://tarryaa.github.io/itimonittou2/assets/index-C_JOwcy1.js",
+          "status": 200
+        },
+        {
+          "url": "https://tarryaa.github.io/itimonittou2/assets/index-DDBxknvd.css",
+          "status": 200
+        },
+        {
+          "url": "https://tarryaa.github.io/itimonittou2/icons/icon-192.png",
+          "status": 200
+        },
+        {
+          "url": "https://tarryaa.github.io/itimonittou2/icons/icon-512.png",
+          "status": 200
+        },
+        {
+          "url": "https://tarryaa.github.io/itimonittou2/icons/icon-maskable-512.png",
+          "status": 200
+        }
+      ],
+      "start": "https://tarryaa.github.io/itimonittou2/",
+      "scope": "https://tarryaa.github.io/itimonittou2/",
+      "display": "standalone",
+      "overflow": false
+    },
+    "correctPopup": true,
+    "persistedAfterReload": true,
+    "offline": "passed",
+    "serviceWorkerScope": "https://tarryaa.github.io/itimonittou2/",
+    "jsErrors": []
+  },
+  {
+    "browser": "webkit",
+    "http": 200,
+    "questions": 1496,
+    "assets": {
+      "statuses": [
+        {
+          "url": "https://tarryaa.github.io/itimonittou2/manifest.webmanifest",
+          "status": 200
+        },
+        {
+          "url": "https://tarryaa.github.io/itimonittou2/icons/apple-touch-icon.png",
+          "status": 200
+        },
+        {
+          "url": "https://tarryaa.github.io/itimonittou2/assets/index-C_JOwcy1.js",
+          "status": 200
+        },
+        {
+          "url": "https://tarryaa.github.io/itimonittou2/assets/index-DDBxknvd.css",
+          "status": 200
+        },
+        {
+          "url": "https://tarryaa.github.io/itimonittou2/icons/icon-192.png",
+          "status": 200
+        },
+        {
+          "url": "https://tarryaa.github.io/itimonittou2/icons/icon-512.png",
+          "status": 200
+        },
+        {
+          "url": "https://tarryaa.github.io/itimonittou2/icons/icon-maskable-512.png",
+          "status": 200
+        }
+      ],
+      "start": "https://tarryaa.github.io/itimonittou2/",
+      "scope": "https://tarryaa.github.io/itimonittou2/",
+      "display": "standalone",
+      "overflow": false
+    },
+    "correctPopup": true,
+    "persistedAfterReload": true,
+    "offline": "not exercised",
+    "jsErrors": []
+  }
+]

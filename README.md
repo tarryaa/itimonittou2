@@ -4,7 +4,7 @@
 
 リポジトリ: https://github.com/tarryaa/itimonittou2
 
-Pages公開予定URL（現在は未有効・未公開）: https://tarryaa.github.io/itimonittou2/
+公開URL: https://tarryaa.github.io/itimonittou2/
 
 ## 使い方
 
@@ -29,6 +29,8 @@ iPhone: Safariで公開URLを開く → 共有 → **ホーム画面に追加** 
 ## 保存・データ保護
 
 IndexedDB v2の `originals` / `edits` / `learning` / `preferences` / `snapshots` に教材原本・編集・学習記録・設定・復元前退避を分離して保存します。問題IDと相対位置で閲覧を再開し、個別の赤字・解答表示は再起動時に隠します。
+
+操作を画面に反映する前にユーザーデータだけの緊急保存コピーをlocalStorageへ同期保存し、IndexedDBへの確定後に削除します。終了で書き込みが中断した場合は、次の起動時に整合性を検証してから復旧します。教材原本はこのコピーに含めません。
 
 バックアップは教材とユーザーデータを含むJSONです。復元前に構造・全参照・編集・日時・設定を検証し、プレビューを確認してから置換します。直前の復元は取り消せます。教材再取り込みでは既存IDの競合を報告し、既存レコードと履歴・編集を保持します。追加的なDBマイグレーションを使い、Service Workerのキャッシュ更新ではDBを削除しません。
 

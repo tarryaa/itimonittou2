@@ -2,9 +2,9 @@
 
 対象リポジトリ: https://github.com/tarryaa/itimonittou2
 
-公開先の想定URL: https://tarryaa.github.io/itimonittou2/
+公開URL: https://tarryaa.github.io/itimonittou2/
 
-このURLはPagesのデプロイ成功とHTTP応答を確認するまでは「公開済み」ではありません。デプロイの確認結果はREADMEの検証記録を参照してください。
+GitHub Actionsによる初回デプロイ成功とHTTP 200を確認済みです。実際のブラウザ検証と更新の結果は[検証記録](VERIFICATION.md)を参照してください。
 
 ## GitHub側の設定
 
@@ -13,7 +13,7 @@
 3. buildとdeployの成功を確認し、deployのEnvironment URLを開く。
 4. GitHub Actionsの実行が制限されている場合は **Settings → Actions → General** で、このリポジトリ内のActionsと使用している公式Actionsを許可する。
 
-現在のAPI接続でPages設定を操作すると `Resource not accessible by integration (403)` が返された。Pages設定にはリポジトリ管理者の操作、またはPages管理権限を持つ接続が必要。ソースへの書き込み権限とPages設定変更権限は別である。
+初回設定時、API接続でPages設定を操作すると `Resource not accessible by integration (403)` が返されたため、ユーザーがSourceをGitHub Actionsに設定しました。現在の設定は完了しています。ソースへの書き込み権限とPages設定変更権限は別です。
 
 ## ローカル確認
 
