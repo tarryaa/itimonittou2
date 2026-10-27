@@ -41,6 +41,45 @@ export const DB_NAME = "itimonittou-learning";
 export const DB_VERSION = 2;
 export const BACKUP_FORMAT = "itimonittou-backup";
 export const BACKUP_VERSION = 1;
+export const EMERGENCY_JOURNAL_KEY = "itimonittou-pending-state-v1";
+
+/** A small synchronous safety copy closes the gap before an IndexedDB commit. */
+function writeEmergencyJournal(state: UserState): string | undefined {
+  try {
+    if (typeof localStorage === "undefined") return;
+    const journal = JSON.stringify({
+      format: "itimonittou-pending-state",
+      version: 1,
+      revision: `${Date.now()}-${Math.random()}`,
+      state,
+    });
+    localStorage.setItem(EMERGENCY_JOURNAL_KEY, journal);
+    return journal;
+  } catch {
+    // Storage restrictions or quota must not prevent the primary IDB write.
+    return;
+  }
+}
+
+function clearEmergencyJournal(journal: string | undefined): void {
+  if (!journal) return;
+  try {
+    // An older queued commit must never remove a newer pending state.
+    if (localStorage.getItem(EMERGENCY_JOURNAL_KEY) === journal)
+      localStorage.removeItem(EMERGENCY_JOURNAL_KEY);
+  } catch {
+    // IDB has already committed; a leftover copy is safe to replay.
+  }
+}
+
+function readEmergencyJournal(): string | undefined {
+  try {
+    if (typeof localStorage === "undefined") return;
+    return localStorage.getItem(EMERGENCY_JOURNAL_KEY) ?? undefined;
+  } catch {
+    return;
+  }
+}
 
 export function emptyState(): UserState {
   return {
@@ -89,27 +128,23 @@ async function putState(db: IDBPDatabase, state: UserState) {
   const tx = db.transaction(["edits", "learning", "preferences"], "readwrite");
   await Promise.all([
     tx.objectStore("edits").put(state.edits, "current"),
-    tx
-      .objectStore("learning")
-      .put(
-        {
-          mistakes: state.mistakes,
-          sessions: state.sessions,
-          flags: state.flags,
-          tags: state.tags,
-        },
-        "current",
-      ),
-    tx
-      .objectStore("preferences")
-      .put(
-        {
-          filters: state.filters,
-          position: state.position,
-          settings: state.settings,
-        },
-        "current",
-      ),
+    tx.objectStore("learning").put(
+      {
+        mistakes: state.mistakes,
+        sessions: state.sessions,
+        flags: state.flags,
+        tags: state.tags,
+      },
+      "current",
+    ),
+    tx.objectStore("preferences").put(
+      {
+        filters: state.filters,
+        position: state.position,
+        settings: state.settings,
+      },
+      "current",
+    ),
   ]);
   await tx.done;
 }
@@ -136,13 +171,48 @@ export async function loadAppData(initial: Dataset): Promise<AppData> {
     filters: { ...defaultFilters, ...preferences?.filters },
     settings: { fontSize: 17, ...preferences?.settings },
   };
+  const journal = readEmergencyJournal();
+  if (journal) {
+    let recovered: UserState | undefined;
+    try {
+      const pending = JSON.parse(journal);
+      check(
+        object(pending) &&
+          pending.format === "itimonittou-pending-state" &&
+          pending.version === 1 &&
+          typeof pending.revision === "string",
+        "緊急保存データの形式が不正です。",
+      );
+      recovered = validateBackup({
+        format: BACKUP_FORMAT,
+        version: BACKUP_VERSION,
+        dataset,
+        state: pending.state,
+      }).state;
+    } catch (error) {
+      // Keep the existing database and source untouched if recovery is invalid.
+      console.warn("緊急保存データを検証できませんでした", error);
+    }
+    if (recovered) {
+      await enqueue(async () => putState(db, recovered!));
+      clearEmergencyJournal(journal);
+      return { dataset, state: recovered };
+    }
+  }
   return { dataset, state };
 }
 
 export function saveState(state: UserState): Promise<void> {
   // Snapshot at call time, before the async queue yields to later UI events.
   const snapshot = structuredClone(state);
-  return enqueue(async () => putState(await database(), snapshot));
+  const previousJournal = readEmergencyJournal();
+  const journal = writeEmergencyJournal(snapshot);
+  return enqueue(async () => {
+    await putState(await database(), snapshot);
+    // A quota-blocked replacement must not leave an old recovery copy that
+    // would roll back this successfully committed state on the next launch.
+    clearEmergencyJournal(journal ?? previousJournal);
+  });
 }
 
 export function saveDataset(dataset: Dataset): Promise<void> {

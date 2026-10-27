@@ -1,8 +1,9 @@
 import "fake-indexeddb/auto";
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Dataset } from "../src/model";
 import {
+  EMERGENCY_JOURNAL_KEY,
   emptyState,
   exportBackup,
   loadAppData,
@@ -165,4 +166,91 @@ it("reports conflicting source metadata and preserves unknown new metadata", () 
   expect(result.conflicts).toContain("metadata:quality_note");
   expect(result.dataset.quality_note).toBe(original.quality_note);
   expect(result.dataset.new_metadata).toEqual({ tags: ["追加"] });
+});
+
+describe("synchronous recovery journal", () => {
+  let values: Map<string, string>;
+  let storage: Pick<Storage, "getItem" | "setItem" | "removeItem">;
+  beforeEach(async () => {
+    values = new Map();
+    storage = {
+      getItem: (key) => values.get(key) ?? null,
+      setItem: (key, value) => {
+        values.set(key, value);
+      },
+      removeItem: (key) => {
+        values.delete(key);
+      },
+    };
+    vi.stubGlobal("localStorage", storage);
+    await saveState(emptyState());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("writes a safety snapshot synchronously before the asynchronous commit", async () => {
+    const state = learned();
+    const saving = saveState(state);
+    const journal = JSON.parse(storage.getItem(EMERGENCY_JOURNAL_KEY)!);
+    expect(journal.state.mistakes).toEqual(state.mistakes);
+    state.mistakes.length = 0;
+    expect(journal.state.mistakes).toHaveLength(1);
+    await saving;
+    expect(storage.getItem(EMERGENCY_JOURNAL_KEY)).toBeNull();
+  });
+
+  it("recovers an uncommitted state on restart without changing the source", async () => {
+    const pending = learned();
+    pending.settings.fontSize = 22;
+    const saved = saveState(pending);
+    const journal = storage.getItem(EMERGENCY_JOURNAL_KEY)!;
+    await saved;
+    await saveState(emptyState());
+    // The old page closed with the database still old and this safety copy new.
+    storage.setItem(EMERGENCY_JOURNAL_KEY, journal);
+    const recovered = await loadAppData(original);
+    expect(recovered.state).toEqual(pending);
+    expect(recovered.dataset).toEqual(original);
+    expect(storage.getItem(EMERGENCY_JOURNAL_KEY)).toBeNull();
+    expect((await loadAppData(original)).state).toEqual(pending);
+  });
+
+  it("does not let an earlier queued commit erase a newer pending revision", async () => {
+    const firstState = learned();
+    const newer = learned();
+    newer.mistakes.push({ ...newer.mistakes[0], id: "m2" });
+    const first = saveState(firstState);
+    const second = saveState(newer);
+    const latestJournal = storage.getItem(EMERGENCY_JOURNAL_KEY);
+    await first;
+    expect(storage.getItem(EMERGENCY_JOURNAL_KEY)).toBe(latestJournal);
+    await second;
+    expect(storage.getItem(EMERGENCY_JOURNAL_KEY)).toBeNull();
+    expect((await loadAppData(original)).state.mistakes).toHaveLength(2);
+  });
+
+  it("falls back to IDB when safety-copy quota is unavailable without replaying stale state", async () => {
+    const saving = saveState(learned());
+    const staleJournal = storage.getItem(EMERGENCY_JOURNAL_KEY)!;
+    await saving;
+    storage.setItem(EMERGENCY_JOURNAL_KEY, staleJournal);
+    storage.setItem = () => {
+      throw new DOMException("full", "QuotaExceededError");
+    };
+    await saveState(emptyState());
+    expect(storage.getItem(EMERGENCY_JOURNAL_KEY)).toBeNull();
+    expect((await loadAppData(original)).state.mistakes).toHaveLength(0);
+  });
+
+  it("ignores an invalid recovery copy and preserves the existing database", async () => {
+    await saveState(learned());
+    storage.setItem(EMERGENCY_JOURNAL_KEY, '{"format":"unrelated"}');
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const recovered = await loadAppData(original);
+    expect(recovered.state).toEqual(learned());
+    expect(recovered.dataset).toEqual(original);
+    expect(console.warn).toHaveBeenCalledOnce();
+  });
 });

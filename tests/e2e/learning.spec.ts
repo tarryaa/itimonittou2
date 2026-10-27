@@ -73,7 +73,6 @@ test("mistake events persist individually and counter changes preserve scroll", 
   await expect(q.getByRole("button", { name: "間違い履歴を開く" })).toHaveText(
     "1",
   );
-  await page.waitForTimeout(500);
   await page.reload();
   await expect(q.getByRole("button", { name: "間違い履歴を開く" })).toHaveText(
     "1",
@@ -135,7 +134,6 @@ test("editor persists text overlay and retains original and history", async ({
   await first.fill("【動作検証】" + original);
   await editor.getByRole("button", { name: "変更を保存" }).click();
   await expect(card(page)).toContainText("【動作検証】");
-  await page.waitForTimeout(500);
   await page.reload();
   await expect(card(page)).toContainText("【動作検証】");
   await expect(
@@ -283,4 +281,28 @@ test("confirmed backup restore and undo preserve individual mistake events", asy
   await expect(
     first.getByRole("button", { name: "間違い履歴を開く" }),
   ).toHaveText("2");
+});
+
+test("an interrupted IndexedDB write recovers the confirmed mistake after immediate restart", async ({
+  page,
+}) => {
+  await start(page);
+  await page.evaluate(() => {
+    const original = IDBDatabase.prototype.transaction;
+    IDBDatabase.prototype.transaction = function (stores, mode, options) {
+      if (mode === "readwrite")
+        throw new DOMException("Simulated page interruption", "AbortError");
+      return original.call(this, stores, mode, options);
+    };
+  });
+  await card(page)
+    .getByRole("button", { name: "間違いを1回記録", exact: true })
+    .click();
+  await expect(
+    card(page).getByRole("button", { name: "間違い履歴を開く" }),
+  ).toHaveText("1");
+  await page.reload();
+  await expect(
+    card(page).getByRole("button", { name: "間違い履歴を開く" }),
+  ).toHaveText("1");
 });

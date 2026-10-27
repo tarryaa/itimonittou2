@@ -347,16 +347,14 @@ export default function App() {
   const importing = useRef(false);
   const [importBusy, setImportBusy] = useState(false);
   const sessionId = useRef("");
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
   const updateState = useCallback((fn: (s: UserState) => UserState) => {
-    setState((old) => {
-      if (!old) return old;
-      const next = fn(old);
-      stateRef.current = next;
-      return next;
-    });
+    const old = stateRef.current;
+    if (!old) return;
+    const next = fn(old);
+    stateRef.current = next;
+    // Journal synchronously before rendering confirmation, then commit to IndexedDB.
+    void saveState(next).catch((e) => setError(`保存できませんでした: ${e}`));
+    setState(next);
   }, []);
   useEffect(() => {
     let live = true;
@@ -373,6 +371,7 @@ export default function App() {
         sessionId.current = s.sessions.at(-1)!.id;
         pending.current = s.position;
         stateRef.current = s;
+        void saveState(s).catch((e) => setError(`保存できませんでした: ${e}`));
         setData(result.dataset);
         setState(s);
         initialized.current = true;
@@ -384,18 +383,8 @@ export default function App() {
     };
   }, []);
   useEffect(() => {
-    if (!state) return;
-    stateRef.current = state;
-    clearTimeout(saveTimer.current);
-    if (importing.current) return;
-    saveTimer.current = setTimeout(() => {
-      saveState(state).catch((e) => setError(`保存できませんでした: ${e}`));
-    }, 180);
-  }, [state]);
-  useEffect(() => {
     const flush = () => {
       if (importing.current) return;
-      clearTimeout(saveTimer.current);
       if (stateRef.current) {
         stateRef.current = {
           ...stateRef.current,
@@ -581,7 +570,6 @@ export default function App() {
     if (!importPreview || importing.current) return;
     importing.current = true;
     setImportBusy(true);
-    clearTimeout(saveTimer.current);
     try {
       await saveState(stateRef.current!);
       let result = importPreview.value;
@@ -618,7 +606,6 @@ export default function App() {
       return;
     importing.current = true;
     setImportBusy(true);
-    clearTimeout(saveTimer.current);
     try {
       await saveState(stateRef.current!);
       const result = await recoverBeforeRestore();
@@ -1168,7 +1155,7 @@ export default function App() {
                   onClick={() => {
                     const s = newSession(state);
                     sessionId.current = s.sessions.at(-1)!.id;
-                    setState(s);
+                    updateState(() => s);
                     setToast("新しい学習セッションを始めました");
                   }}
                 >
