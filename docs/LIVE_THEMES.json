@@ -1,0 +1,84 @@
+[
+  {
+    "browser": "chromium",
+    "http": 200,
+    "version": "1.2.0",
+    "checks": [
+      {
+        "theme": "aqua-dark",
+        "retainedAfterReload": true,
+        "mistakeCount": 1,
+        "background": "rgb(7, 12, 15)",
+        "rootBackground": "rgb(7, 12, 15)",
+        "overflow": false,
+        "mounted": 6,
+        "maskedColor": "rgba(0, 0, 0, 0)",
+        "themeColor": "#002e38"
+      },
+      {
+        "theme": "aqua-light",
+        "retainedAfterReload": true,
+        "mistakeCount": 1,
+        "background": "rgb(241, 241, 247)",
+        "rootBackground": "rgb(241, 241, 247)",
+        "overflow": false,
+        "mounted": 6,
+        "maskedColor": "rgba(0, 0, 0, 0)",
+        "themeColor": "#f1f1f7"
+      },
+      {
+        "theme": "classic",
+        "retainedAfterReload": true,
+        "mistakeCount": 1,
+        "background": "rgba(0, 0, 0, 0)",
+        "rootBackground": "rgb(247, 248, 244)",
+        "overflow": false,
+        "mounted": 6,
+        "maskedColor": "rgba(0, 0, 0, 0)",
+        "themeColor": "#183d39"
+      }
+    ],
+    "jsErrors": []
+  },
+  {
+    "browser": "webkit",
+    "http": 200,
+    "version": "1.2.0",
+    "checks": [
+      {
+        "theme": "aqua-dark",
+        "retainedAfterReload": true,
+        "mistakeCount": 1,
+        "background": "rgb(7, 12, 15)",
+        "rootBackground": "rgb(7, 12, 15)",
+        "overflow": false,
+        "mounted": 6,
+        "maskedColor": "rgba(0, 0, 0, 0)",
+        "themeColor": "#002e38"
+      },
+      {
+        "theme": "aqua-light",
+        "retainedAfterReload": true,
+        "mistakeCount": 1,
+        "background": "rgb(241, 241, 247)",
+        "rootBackground": "rgb(241, 241, 247)",
+        "overflow": false,
+        "mounted": 6,
+        "maskedColor": "rgba(0, 0, 0, 0)",
+        "themeColor": "#f1f1f7"
+      },
+      {
+        "theme": "classic",
+        "retainedAfterReload": true,
+        "mistakeCount": 1,
+        "background": "rgba(0, 0, 0, 0)",
+        "rootBackground": "rgb(247, 248, 244)",
+        "overflow": false,
+        "mounted": 6,
+        "maskedColor": "rgba(0, 0, 0, 0)",
+        "themeColor": "#183d39"
+      }
+    ],
+    "jsErrors": []
+  }
+]

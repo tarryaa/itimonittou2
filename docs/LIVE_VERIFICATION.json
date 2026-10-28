@@ -3,6 +3,7 @@
     "browser": "chromium",
     "http": 200,
     "questions": 1496,
+    "mountedQuestions": 6,
     "assets": {
       "statuses": [
         {
@@ -14,11 +15,11 @@
           "status": 200
         },
         {
-          "url": "https://tarryaa.github.io/itimonittou2/assets/index-C_JOwcy1.js",
+          "url": "https://tarryaa.github.io/itimonittou2/assets/index-BdHtHjKf.js",
           "status": 200
         },
         {
-          "url": "https://tarryaa.github.io/itimonittou2/assets/index-DDBxknvd.css",
+          "url": "https://tarryaa.github.io/itimonittou2/assets/index-B8JXaiR8.css",
           "status": 200
         },
         {
@@ -49,6 +50,7 @@
     "browser": "webkit",
     "http": 200,
     "questions": 1496,
+    "mountedQuestions": 6,
     "assets": {
       "statuses": [
         {
@@ -60,11 +62,11 @@
           "status": 200
         },
         {
-          "url": "https://tarryaa.github.io/itimonittou2/assets/index-C_JOwcy1.js",
+          "url": "https://tarryaa.github.io/itimonittou2/assets/index-BdHtHjKf.js",
           "status": 200
         },
         {
-          "url": "https://tarryaa.github.io/itimonittou2/assets/index-DDBxknvd.css",
+          "url": "https://tarryaa.github.io/itimonittou2/assets/index-B8JXaiR8.css",
           "status": 200
         },
         {
