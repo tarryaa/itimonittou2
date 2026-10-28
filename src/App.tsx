@@ -44,7 +44,7 @@ import {
   mergeDataset,
   recoverBeforeRestore,
 } from "./store";
-import type { UserState, Position, AppData } from "./store";
+import type { UserState, Position, AppData, AppTheme } from "./store";
 import {
   defaultFilters,
   filterQuestions,
@@ -57,6 +57,8 @@ import { Segments } from "./Segments";
 import { registerPwa } from "./pwa";
 import TableContent from "./TableContent";
 import VirtualBook, { type BookHandle } from "./VirtualBook";
+import ThemePicker from "./ThemePicker";
+import { applyTheme } from "./theme";
 
 const uid = () => crypto.randomUUID();
 function documentPosition(): Position | undefined {
@@ -376,6 +378,9 @@ export default function App() {
       );
     setState(next);
   }, []);
+  useLayoutEffect(() => {
+    if (state) applyTheme(state.settings.theme ?? "classic");
+  }, [!!state, state?.settings.theme]);
   useEffect(() => {
     let live = true;
     fetch(`${import.meta.env.BASE_URL}data/original.json`)
@@ -491,7 +496,14 @@ export default function App() {
       offset: id === anchor.id ? anchor.offset : 150,
     });
     setCurrent(id);
-  }, [filtered, data, state?.settings.fontSize, state?.filters, state?.edits]);
+  }, [
+    filtered,
+    data,
+    state?.settings.fontSize,
+    state?.settings.theme,
+    state?.filters,
+    state?.edits,
+  ]);
   useEffect(() => {
     if (!initialized.current) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -835,7 +847,7 @@ export default function App() {
           ref={book}
           items={filtered}
           renderRow={renderRow}
-          layoutKey={state.settings.fontSize}
+          layoutKey={`${state.settings.fontSize}:${state.settings.theme ?? "classic"}`}
         />
         <p className="end-note">ここまでの積み重ねを、明日につなげよう。</p>
       </main>
@@ -1289,6 +1301,17 @@ export default function App() {
       )}
       {panel === "settings" && (
         <Modal title="設定・データ管理" onClose={() => setPanel("")}>
+          <h3>表示テーマ</h3>
+          <ThemePicker
+            value={state.settings.theme ?? "classic"}
+            onChange={(theme: AppTheme) => {
+              pending.current = capture();
+              updateState((s) => ({
+                ...s,
+                settings: { ...s.settings, theme },
+              }));
+            }}
+          />
           <h3>読みやすさ</h3>
           <label>
             本文の文字サイズ <b>{state.settings.fontSize}px</b>
@@ -1301,7 +1324,7 @@ export default function App() {
                 pending.current = capture();
                 updateState((s) => ({
                   ...s,
-                  settings: { fontSize: Number(e.target.value) },
+                  settings: { ...s.settings, fontSize: Number(e.target.value) },
                 }));
               }}
             />
@@ -1386,7 +1409,7 @@ export default function App() {
             ブラウザに保存領域の保護をリクエスト
           </button>
           <p className="muted">
-            日本史の栞 v1.1.0 · 教材{" "}
+            日本史の栞 v1.2.0 · 教材{" "}
             {data.dataset_version || data.schema_version}
           </p>
         </Modal>

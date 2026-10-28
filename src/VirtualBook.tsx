@@ -19,7 +19,7 @@ export interface BookHandle {
 interface Props {
   items: StudyQuestion[];
   renderRow: (item: StudyQuestion, index: number) => ReactNode;
-  layoutKey: number;
+  layoutKey: number | string;
 }
 
 /** Keep the whole book's scroll extent, mounting only nearby questions. */

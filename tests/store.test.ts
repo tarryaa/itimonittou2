@@ -54,6 +54,39 @@ describe("backup protection and persistence", () => {
     expect(restored.dataset).toEqual(original);
     expect(restored.state).toEqual(state);
   });
+  it("defaults legacy backups to classic and rejects unknown themes", () => {
+    const legacy = learned();
+    delete legacy.settings.theme;
+    expect(
+      validateBackup(exportBackup(original, legacy)).state.settings.theme,
+    ).toBe("classic");
+    const invalid = JSON.parse(exportBackup(original, legacy));
+    invalid.state.settings.theme = "unknown-theme";
+    expect(() => validateBackup(invalid)).toThrow(/テーマ設定/);
+  });
+
+  it("keeps selected themes through preferences-only saves, restore and undo", async () => {
+    const selected = learned();
+    selected.settings.theme = "aqua-dark";
+    await saveState(selected);
+    const light = {
+      ...selected,
+      settings: { ...selected.settings, theme: "aqua-light" as const },
+    };
+    await saveState(light, { changed: ["preferences"] });
+    const loaded = await loadAppData(original);
+    expect(loaded.state.settings.theme).toBe("aqua-light");
+    expect(loaded.state.mistakes).toEqual(selected.mistakes);
+    const legacy = learned();
+    delete legacy.settings.theme;
+    await restoreBackup(exportBackup(original, legacy));
+    expect((await loadAppData(original)).state.settings.theme).toBe("classic");
+    await recoverBeforeRestore();
+    expect((await loadAppData(original)).state.settings.theme).toBe(
+      "aqua-light",
+    );
+  });
+
   it("rejects an unrelated JSON document without writing", () => {
     expect(() => validateBackup(original)).toThrow("バックアップ形式");
   });
@@ -378,6 +411,23 @@ describe("synchronous recovery journal", () => {
       (await loadAppData(original)).state.sessions[0].viewed,
     ).not.toContain("missing-question");
     expect(console.warn).toHaveBeenCalledOnce();
+  });
+
+  it("recovers a selected theme from an interrupted preferences save", async () => {
+    const before = learned();
+    await saveState(before);
+    const selected = {
+      ...before,
+      settings: { ...before.settings, theme: "aqua-dark" as const },
+    };
+    const saving = saveState(selected, { changed: ["preferences"] });
+    const journal = storage.getItem(EMERGENCY_SLICE_KEYS.preferences)!;
+    await saving;
+    await saveState(before);
+    storage.setItem(EMERGENCY_SLICE_KEYS.preferences, journal);
+    const recovered = await loadAppData(original);
+    expect(recovered.state.settings.theme).toBe("aqua-dark");
+    expect(recovered.state.mistakes).toEqual(before.mistakes);
   });
 
   it("ignores an invalid recovery copy and preserves the existing database", async () => {

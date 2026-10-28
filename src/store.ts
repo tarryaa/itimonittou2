@@ -23,6 +23,7 @@ export interface Position {
   id: string;
   offset: number;
 }
+export type AppTheme = "classic" | "aqua-dark" | "aqua-light";
 export interface UserState {
   mistakes: Mistake[];
   flags: Record<string, boolean>;
@@ -30,7 +31,7 @@ export interface UserState {
   sessions: Session[];
   filters: Filters;
   position?: Position;
-  settings: { fontSize: number };
+  settings: { fontSize: number; theme?: AppTheme };
   edits: Record<string, QuestionEdit>;
 }
 export interface AppData {
@@ -119,7 +120,9 @@ function applyPreferences(
   const next: UserState = {
     ...state,
     filters: value.filters ?? state.filters,
-    settings: value.settings ?? state.settings,
+    settings: value.settings
+      ? { theme: "classic", ...value.settings }
+      : state.settings,
     ...(Object.hasOwn(value, "position") ? { position: value.position } : {}),
   };
   const progress = value.sessionProgress;
@@ -167,7 +170,7 @@ export function emptyState(): UserState {
     tags: {},
     sessions: [],
     filters: { ...defaultFilters },
-    settings: { fontSize: 17 },
+    settings: { fontSize: 17, theme: "classic" },
     edits: {},
   };
 }
@@ -243,7 +246,7 @@ export async function loadAppData(initial: Dataset): Promise<AppData> {
     ...learning,
     edits: edits ?? {},
     filters: { ...defaultFilters, ...preferences?.filters },
-    settings: { fontSize: 17, ...preferences?.settings },
+    settings: { fontSize: 17, theme: "classic", ...preferences?.settings },
     ...(preferences?.position !== undefined
       ? { position: preferences.position }
       : {}),
@@ -521,6 +524,11 @@ export function validateBackup(input: unknown): AppData {
       s.settings.fontSize <= 40,
     "文字サイズ設定が不正です。",
   );
+  check(
+    s.settings.theme === undefined ||
+      ["classic", "aqua-dark", "aqua-light"].includes(s.settings.theme),
+    "テーマ設定が不正です。",
+  );
   if (s.position !== undefined)
     check(
       object(s.position) &&
@@ -528,7 +536,13 @@ export function validateBackup(input: unknown): AppData {
         Number.isFinite(s.position.offset),
       "閲覧位置が不正です。",
     );
-  return structuredClone({ dataset, state: s as unknown as UserState });
+  return structuredClone({
+    dataset,
+    state: {
+      ...s,
+      settings: { ...s.settings, theme: s.settings.theme ?? "classic" },
+    } as unknown as UserState,
+  });
 }
 
 /** The UI must display a preview and ask the user to confirm before calling this. */
