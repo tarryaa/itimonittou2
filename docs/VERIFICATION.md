@@ -19,20 +19,22 @@
 - 添付ファイルと `public/data/original.json` のSHA-256一致:
   `50b810652c09f4324b301d1f25700354773ac7536573013b13683c14af855a3b`
 
-## GitHub Pages公開確認（v1.2.0時点）
+## GitHub Pages公開確認（v1.3.0）
 
 **公開済み:** https://tarryaa.github.io/itimonittou2/
 
-GitHub Actionsの[実行40631699414](https://github.com/tarryaa/itimonittou2/actions/runs/40631699414)で、単体テスト44件・ブラウザテスト37件（1件意図的スキップ）・ビルド・Pagesデプロイが成功しました。配信アプリのソースコミットは `a3ddcad62c177927c281370432b4d496f16c14da` です。
+GitHub Actionsの[実行40826362219](https://github.com/tarryaa/itimonittou2/actions/runs/40826362219)で、単体テスト57件・ブラウザテスト43件（1件意図的スキップ）・ビルド・Pagesデプロイが成功しました。配信アプリのソースコミットは `f7b1273f30ac01991fa8b075464362ef974dcea1` です。
 
-公開URLでChromium/WebKitの両方を使って確認しました。詳細は [LIVE_VERIFICATION.json](LIVE_VERIFICATION.json)、画面は [live-mobile.png](live-mobile.png) に保存しています。
+公開URLでChromium/WebKitの両方を使って確認しました。詳細は [LIVE_READING.json](LIVE_READING.json)、画面は [live-mobile.png](live-mobile.png) に保存しています。以前の検証結果は [LIVE_VERIFICATION.json](LIVE_VERIFICATION.json) と [LIVE_THEMES.json](LIVE_THEMES.json) に残しています。
 
 - HTML・JavaScript・CSS・manifest・全4アイコンがHTTP 200。
-- 教材1,496問の表示、空欄の正しい解答、横スクロールなし、JavaScript例外なし。
+- 教材1,496問の表示、空欄の正しい解答のインライン表示、開閉前後の寸法一致、解答全文一覧、横スクロールなし、JavaScript例外なし。
+- ★2のみ393問、★2以上1,324問、絞り込み設定の再読み込み後の保持。
+- 全3テーマで問題背景の左右位置が0〜390px、角丸0px。クラシック・ライトは白背景、ダークは従来の暗色背景。各テーマと間違い記録が再読み込み後も保持されること。
 - 両ブラウザで間違い記録直後の即時再読み込み後も回数1を維持。
 - Chromiumで公開URLのService Worker登録・オフライン再読み込み・教材表示・記録維持。
 - manifestのstart_url/scopeとService Workerのscopeが `/itimonittou2/` に一致し、displayはstandalone。
-- 配信JS `index-BdHtHjKf.js`、キャッシュ世代 `8dfc31127f696c7dbcdf` を確認。
+- 配信JS `index-q6RYXYJl.js`、CSS `index-BSMkDw0h.css`、キャッシュ世代 `be41a507b096781b33a1` を確認。
 
 初回公開の最終チェックで、画面反映直後の再読み込み時に180msの保存待ちと非同期IDB書き込みが終了に間に合わず、記録が失われる場合を検出しました。ユーザー操作を表示する前に同期の緊急保存コピーを作り、IDB確定後に一致するコピーだけを削除する方式へ修正しています。起動時は未確定コピーを検証してIDBに復旧します。書き込みを意図的に中断した後の再起動と、以前の書き込みが新しい記録を消さないことを回帰テストに追加し、公開サイトでも即時再読み込みを再検証しました。
 
@@ -46,7 +48,7 @@ v1.2.0では、全文データを保持しつつ画面周辺だけを描画し�
 
 設定で「栞（オリジナル）」「アクア・ダーク」「アクア・ライト」の3テーマを選べます。元の配色を完全に戻せること、新テーマが描画数を増やさないこと、テーマ・文字サイズ・間違い履歴・深い位置を即時再起動後も維持すること、旧バックアップは元テーマになり、不正なテーマを拒否することを検証しました。起動時の配色ヒントは小さなlocalStorage値ですが、選択の原本は従来どおりIndexedDBです。
 
-公開サイトでもChromium/WebKitで3テーマを切替→再読み込みし、選択・間違い記録の保持、赤字の透明マスク、横はみ出しなし、描画40問以下、メタカラー切替を確認しました。[実測JSON](LIVE_THEMES.json)、[ダーク](theme-aqua-dark.png)、[ライト](theme-aqua-light.png)、[設定画面](theme-picker.png)を保存しています。公開サイトの基本検証では両エンジンとも6問だけを描画し、全1,496問は利用可能です。
+公開サイトでもChromium/WebKitで3テーマを切替→再読み込みし、選択・間違い記録の保持、赤字の透明マスク、横はみ出しなし、描画40問以下、メタカラー切替を確認しました。v1.3.0でも再検証し、[実測JSON](LIVE_READING.json)、[ダーク](theme-aqua-dark.png)、[ライト](theme-aqua-light.png)、[設定画面](theme-picker.png)を更新しています。公開サイトの基本検証では両エンジンとも6問だけを描画し、全1,496問は利用可能です。
 
 ## 絞り込み・全幅表示・インライン解答 v1.3.0
 

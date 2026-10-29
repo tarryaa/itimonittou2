@@ -1,0 +1,206 @@
+{
+  "verifiedAt": "2026-10-29T06:00:43.670Z",
+  "url": "https://tarryaa.github.io/itimonittou2/",
+  "version": "1.3.0",
+  "results": [
+    {
+      "browser": "chromium",
+      "http": 200,
+      "version": "1.3.0",
+      "questions": 1496,
+      "overflow": false,
+      "mounted": 6,
+      "assets": {
+        "statuses": [
+          {
+            "url": "https://tarryaa.github.io/itimonittou2/manifest.webmanifest",
+            "status": 200
+          },
+          {
+            "url": "https://tarryaa.github.io/itimonittou2/icons/apple-touch-icon.png",
+            "status": 200
+          },
+          {
+            "url": "https://tarryaa.github.io/itimonittou2/assets/index-q6RYXYJl.js",
+            "status": 200
+          },
+          {
+            "url": "https://tarryaa.github.io/itimonittou2/assets/index-BSMkDw0h.css",
+            "status": 200
+          },
+          {
+            "url": "https://tarryaa.github.io/itimonittou2/icons/icon-192.png",
+            "status": 200
+          },
+          {
+            "url": "https://tarryaa.github.io/itimonittou2/icons/icon-512.png",
+            "status": 200
+          },
+          {
+            "url": "https://tarryaa.github.io/itimonittou2/icons/icon-maskable-512.png",
+            "status": 200
+          }
+        ],
+        "start": "https://tarryaa.github.io/itimonittou2/",
+        "scope": "https://tarryaa.github.io/itimonittou2/",
+        "display": "standalone"
+      },
+      "inlineAnswer": {
+        "text": "700",
+        "completeAnswer": "700万年前",
+        "stableDimensions": true,
+        "noTooltip": true
+      },
+      "persistedAfterImmediateReload": true,
+      "starFilter": {
+        "all": 1496,
+        "exactTwo": 393,
+        "minimumTwo": 1324,
+        "persistedMinimumTwoAfterReload": true
+      },
+      "themes": [
+        {
+          "theme": "aqua-dark",
+          "retainedAfterReload": true,
+          "mistakeCount": 1,
+          "left": 0,
+          "right": 390,
+          "radius": "0px",
+          "surface": "rgb(23, 39, 46)",
+          "themeColor": "#002e38",
+          "maskedColor": "rgba(0, 0, 0, 0)",
+          "overflow": false,
+          "mounted": 6
+        },
+        {
+          "theme": "aqua-light",
+          "retainedAfterReload": true,
+          "mistakeCount": 1,
+          "left": 0,
+          "right": 390,
+          "radius": "0px",
+          "surface": "rgb(255, 255, 255)",
+          "themeColor": "#f1f1f7",
+          "maskedColor": "rgba(0, 0, 0, 0)",
+          "overflow": false,
+          "mounted": 6
+        },
+        {
+          "theme": "classic",
+          "retainedAfterReload": true,
+          "mistakeCount": 1,
+          "left": 0,
+          "right": 390,
+          "radius": "0px",
+          "surface": "rgb(255, 255, 255)",
+          "themeColor": "#183d39",
+          "maskedColor": "rgba(0, 0, 0, 0)",
+          "overflow": false,
+          "mounted": 6
+        }
+      ],
+      "offline": "passed",
+      "serviceWorkerScope": "https://tarryaa.github.io/itimonittou2/",
+      "jsErrors": []
+    },
+    {
+      "browser": "webkit",
+      "http": 200,
+      "version": "1.3.0",
+      "questions": 1496,
+      "overflow": false,
+      "mounted": 6,
+      "assets": {
+        "statuses": [
+          {
+            "url": "https://tarryaa.github.io/itimonittou2/manifest.webmanifest",
+            "status": 200
+          },
+          {
+            "url": "https://tarryaa.github.io/itimonittou2/icons/apple-touch-icon.png",
+            "status": 200
+          },
+          {
+            "url": "https://tarryaa.github.io/itimonittou2/assets/index-q6RYXYJl.js",
+            "status": 200
+          },
+          {
+            "url": "https://tarryaa.github.io/itimonittou2/assets/index-BSMkDw0h.css",
+            "status": 200
+          },
+          {
+            "url": "https://tarryaa.github.io/itimonittou2/icons/icon-192.png",
+            "status": 200
+          },
+          {
+            "url": "https://tarryaa.github.io/itimonittou2/icons/icon-512.png",
+            "status": 200
+          },
+          {
+            "url": "https://tarryaa.github.io/itimonittou2/icons/icon-maskable-512.png",
+            "status": 200
+          }
+        ],
+        "start": "https://tarryaa.github.io/itimonittou2/",
+        "scope": "https://tarryaa.github.io/itimonittou2/",
+        "display": "standalone"
+      },
+      "inlineAnswer": {
+        "text": "700",
+        "completeAnswer": "700万年前",
+        "stableDimensions": true,
+        "noTooltip": true
+      },
+      "persistedAfterImmediateReload": true,
+      "starFilter": {
+        "all": 1496,
+        "exactTwo": 393,
+        "minimumTwo": 1324,
+        "persistedMinimumTwoAfterReload": true
+      },
+      "themes": [
+        {
+          "theme": "aqua-dark",
+          "retainedAfterReload": true,
+          "mistakeCount": 1,
+          "left": 0,
+          "right": 390,
+          "radius": "0px",
+          "surface": "rgb(23, 39, 46)",
+          "themeColor": "#002e38",
+          "maskedColor": "rgba(0, 0, 0, 0)",
+          "overflow": false,
+          "mounted": 6
+        },
+        {
+          "theme": "aqua-light",
+          "retainedAfterReload": true,
+          "mistakeCount": 1,
+          "left": 0,
+          "right": 390,
+          "radius": "0px",
+          "surface": "rgb(255, 255, 255)",
+          "themeColor": "#f1f1f7",
+          "maskedColor": "rgba(0, 0, 0, 0)",
+          "overflow": false,
+          "mounted": 6
+        },
+        {
+          "theme": "classic",
+          "retainedAfterReload": true,
+          "mistakeCount": 1,
+          "left": 0,
+          "right": 390,
+          "radius": "0px",
+          "surface": "rgb(255, 255, 255)",
+          "themeColor": "#183d39",
+          "maskedColor": "rgba(0, 0, 0, 0)",
+          "overflow": false,
+          "mounted": 6
+        }
+      ],
+      "offline": "not exercised",
+      "jsErrors": []
+    }
+  ]
+}
