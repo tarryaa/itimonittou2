@@ -15,7 +15,7 @@ const choices: { id: ThemeChoice; label: string; description: string }[] = [
   {
     id: "aqua-light",
     label: "アクア・ライト",
-    description: "白いカードとシアン。明るく、すっきり。",
+    description: "広がる白とシアン。明るく、すっきり。",
   },
 ];
 

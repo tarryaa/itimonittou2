@@ -507,7 +507,7 @@ export function validateBackup(input: unknown): AppData {
       ["era", "chapter", "section", "stars", "tag", "query"].every(
         (k) => typeof f[k] === "string",
       ) &&
-      ["", "0", "1", "2", "3"].includes(f.stars),
+      ["", "0", "1", "2", "3", "1+", "2+"].includes(f.stars),
     "絞り込み条件が不正です。",
   );
   check(

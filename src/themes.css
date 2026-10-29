@@ -227,7 +227,6 @@ html[data-theme^="aqua-"] .brand,
 html[data-theme^="aqua-"] .intro h1,
 html[data-theme^="aqua-"] .chapter-heading,
 html[data-theme^="aqua-"] .question-text,
-html[data-theme^="aqua-"] .answer-popup-text,
 html[data-theme^="aqua-"] .loading h1 {
   font-family:
     -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP",
@@ -329,13 +328,17 @@ html[data-theme^="aqua-"] .chapter-heading > span {
   color: var(--theme-accent-text);
   letter-spacing: 0.08em;
 }
+html[data-theme^="aqua-"] .app-main {
+  --book-surface: var(--theme-surface);
+}
 html[data-theme^="aqua-"] .question {
-  margin: 0 0 14px;
-  padding: 19px 17px 14px;
-  background: var(--theme-surface);
-  border: 1px solid var(--theme-card-border);
-  border-radius: 25px;
-  box-shadow: var(--theme-shadow);
+  margin: 0;
+  padding: 19px var(--book-gutter-end) 14px var(--book-gutter-start);
+  background: var(--book-surface);
+  border: 0;
+  border-bottom: 1px solid var(--theme-card-border);
+  border-radius: 0;
+  box-shadow: none;
 }
 html[data-theme^="aqua-"] .question-text {
   font-weight: 400;
@@ -451,7 +454,6 @@ html[data-theme^="aqua-"] .more-button {
 html[data-theme^="aqua-"] .subquestion {
   border-left: 2px solid var(--theme-accent);
   background: var(--theme-surface);
-  padding-left: 15px;
 }
 html[data-theme^="aqua-"] .source-table {
   color: var(--theme-secondary);
@@ -510,25 +512,6 @@ html[data-theme^="aqua-"] .bottom-nav > button.active {
 }
 html[data-theme^="aqua-"] .end-note {
   color: var(--theme-muted);
-}
-html[data-theme^="aqua-"] .answer-popup {
-  border-color: var(--theme-card-border);
-  border-top-color: var(--theme-accent);
-  border-radius: 22px;
-  color: var(--theme-text);
-  background: var(--theme-surface);
-  box-shadow: 0 10px 40px #0003;
-}
-html[data-theme^="aqua-"] .answer-popup-label {
-  color: var(--theme-accent-text);
-}
-html[data-theme^="aqua-"] .answer-popup-label button {
-  color: var(--theme-muted);
-  background: transparent;
-  border-radius: 50%;
-}
-html[data-theme^="aqua-"] .answer-popup-fill {
-  color: var(--theme-secondary);
 }
 html[data-theme^="aqua-"] .modal-backdrop {
   background: #0008;
@@ -704,11 +687,8 @@ html[data-theme^="aqua-"] .theme-check {
     padding: 6px 7px;
   }
   html[data-theme^="aqua-"] .question {
-    padding: 17px 14px 13px;
-    border-radius: 23px;
-  }
-  html[data-theme^="aqua-"] .subquestion {
-    padding-left: 13px;
+    padding-top: 17px;
+    padding-bottom: 13px;
   }
   html[data-theme^="aqua-"] .modal {
     border-radius: 28px 28px 0 0;

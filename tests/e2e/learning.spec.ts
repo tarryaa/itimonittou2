@@ -89,16 +89,46 @@ test("source total stays complete while visible red terms toggle independently a
   await red.nth(0).click();
   await expect(red.nth(0)).toHaveAttribute("aria-pressed", "false");
   const blank = card(page).locator(".blank").first();
+  await blank.scrollIntoViewIfNeeded();
+  const before = await blank.boundingBox();
+  expect(before).toBeTruthy();
+  await expect(blank).toHaveAttribute("aria-expanded", "false");
+  await expect
+    .poll(() =>
+      blank.locator(".blank-reserve").evaluate((el) =>
+        Number(getComputedStyle(el).opacity),
+      ),
+    )
+    .toBe(0);
   await blank.click();
-  const popup = page.getByRole("tooltip");
-  await expect(popup).toContainText("700万年前");
-  await expect(popup).toContainText("空欄に入る部分：700");
-  const box = await popup.boundingBox();
+  await expect(blank).toHaveAttribute("aria-expanded", "true");
+  await expect
+    .poll(() =>
+      blank.locator(".blank-reserve").evaluate((el) =>
+        Number(getComputedStyle(el).opacity),
+      ),
+    )
+    .toBe(1);
+  await expect(blank.locator(".blank-reserve")).toHaveText("700");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  const box = await blank.boundingBox();
   expect(box).toBeTruthy();
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(391);
+  for (const dimension of ["x", "y", "width", "height"] as const)
+    expect(Math.abs(box![dimension] - before![dimension])).toBeLessThan(1);
   await blank.click();
-  await expect(popup).toHaveCount(0);
+  await expect(blank).toHaveAttribute("aria-expanded", "false");
+  await expect
+    .poll(() =>
+      blank.locator(".blank-reserve").evaluate((el) =>
+        Number(getComputedStyle(el).opacity),
+      ),
+    )
+    .toBe(0);
+  const hidden = await blank.boundingBox();
+  for (const dimension of ["x", "y", "width", "height"] as const)
+    expect(Math.abs(hidden![dimension] - before![dimension])).toBeLessThan(1);
   await page.getByRole("button", { name: "すべて表示", exact: true }).click();
   await expect(red.nth(0)).toHaveAttribute("aria-pressed", "true");
   await expect(card(page).locator(".blank")).toContainText("700");
@@ -108,6 +138,12 @@ test("source total stays complete while visible red terms toggle independently a
     () => document.documentElement.scrollWidth > window.innerWidth,
   );
   expect(overflow).toBe(false);
+  await card(page).getByRole("button", { name: "問題の編集とタグ" }).click();
+  const menu = page.getByRole("dialog", { name: "p.12 · 問題の管理" });
+  await menu.getByText("解答一覧（全文）", { exact: true }).click();
+  await expect(menu.locator(".answer-list")).toContainText("700万年前");
+  await expect(menu.locator(".answer-list")).toContainText("700");
+  await close(page);
 });
 
 test("mistake events persist individually and counter changes preserve scroll", async ({
@@ -260,8 +296,10 @@ test("individual answers hide only after distant scrolling and bulk answers stay
   await start(page);
   const first = card(page);
   const red = first.locator(".red-segment").first();
+  const blank = first.locator(".blank");
   await red.click();
-  await first.locator(".blank").click();
+  await blank.click();
+  await expect(blank).toHaveAttribute("aria-expanded", "true");
   await page.evaluate(() => window.scrollBy(0, 100));
   await expect(red).toHaveAttribute("aria-pressed", "true");
   await navigate(page, "jp-kana-001-p026-c06-q01");
@@ -269,6 +307,7 @@ test("individual answers hide only after distant scrolling and bulk answers stay
   await expect(page.getByRole("tooltip")).toHaveCount(0);
   await navigate(page, firstId);
   await expect(red).toHaveAttribute("aria-pressed", "false");
+  await expect(blank).toHaveAttribute("aria-expanded", "false");
   await page.getByRole("button", { name: "すべて表示", exact: true }).click();
   await navigate(page, "jp-kana-001-p026-c06-q01");
   await expect(
@@ -298,7 +337,13 @@ test("red text converts into a linked blank and returns to red without losing hi
   await editor.getByRole("button", { name: "変更を保存" }).click();
   await expect(first.locator(".blank")).toHaveCount(2);
   await first.locator(".note .blank").click();
-  await expect(page.getByRole("tooltip")).toContainText("中新世");
+  await expect(first.locator(".note .blank")).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  await expect(first.locator(".note .blank-reserve")).toBeVisible();
+  await expect(first.locator(".note .blank-reserve")).toHaveText("中新世");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
   await first.getByRole("button", { name: "問題の編集とタグ" }).click();
   await page
     .getByRole("button", { name: "問題文・赤字・空欄・解答を編集" })

@@ -72,6 +72,69 @@ const ids = (s: UserState) =>
   filterQuestions(questions, s, now).map((q) => q.id);
 
 describe("combined study filters", () => {
+  it.each<[string, string[]]>([
+    ["1+", ["q1", "q2", "q3"]],
+    ["2+", ["q2", "q3"]],
+    ["2", ["q2"]],
+    ["3", ["q3"]],
+    ["0", ["q0"]],
+  ])(
+    "supports importance %s without changing exact saved filters",
+    (stars, expected) => {
+      const material = [0, 1, 2, 3].map((n) => question(`q${n}`, "古代", n));
+      const unknown = question("q4");
+      unknown.source.importance_stars = null;
+      const s = emptyState();
+      s.filters.stars = stars;
+      expect(
+        filterQuestions([...material, unknown], s, now).map((q) => q.id),
+      ).toEqual(expected);
+    },
+  );
+  it("combines minimum importance with era, tags and mistake history", () => {
+    const material = [
+      question("q1", "古代", 2),
+      question("q2", "中世", 3),
+      question("q3", "古代", 3),
+    ];
+    const s = state();
+    s.tags = { q1: ["復習"], q2: ["復習"], q3: ["復習"] };
+    s.filters = {
+      ...defaultFilters,
+      stars: "2+",
+      era: "古代",
+      tag: "復習",
+      minMistakes: 1,
+      period: "today",
+    };
+    expect(filterQuestions(material, s, now).map((q) => q.id)).toEqual(["q1"]);
+  });
+  it("uses edited and inherited parent importance for minimum thresholds", () => {
+    const parent = question("q1", "古代", 1);
+    const branch = question("q2");
+    branch.source.kind = "subquestion";
+    branch.source.parent_id = parent.id;
+    branch.source.importance_stars = null;
+    const s = emptyState();
+    s.filters.stars = "2+";
+    expect(filterQuestions([parent, branch], s, now)).toEqual([]);
+    s.edits[parent.id] = {
+      question: { ...parent.source, importance_stars: 3 },
+      answers: [],
+    };
+    expect(filterQuestions([parent, branch], s, now).map((q) => q.id)).toEqual([
+      "q1", "q2",
+    ]);
+    s.edits[branch.id] = {
+      question: { ...branch.source, importance_stars: 1 },
+      answers: [],
+    };
+    expect(filterQuestions([parent, branch], s, now).map((q) => q.id)).toEqual([
+      "q1",
+    ]);
+    expect(parent.source.importance_stars).toBe(1);
+    expect(branch.source.importance_stars).toBeNull();
+  });
   it("combines era, stars, and total mistake count", () => {
     const s = state();
     s.filters = { ...defaultFilters, era: "古代", stars: "1", minMistakes: 2 };

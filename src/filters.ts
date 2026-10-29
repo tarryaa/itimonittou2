@@ -141,7 +141,14 @@ export function filterQuestions(
         (parent
           ? (state.edits[parent.id]?.question ?? parent.source).importance_stars
           : effectiveStars(q, questions, state));
-      if (stars !== Number(f.stars)) return false;
+      const atLeast = f.stars.endsWith("+");
+      const threshold = Number(atLeast ? f.stars.slice(0, -1) : f.stars);
+      if (
+        stars === null ||
+        stars === undefined ||
+        (atLeast ? stars < threshold : stars !== threshold)
+      )
+        return false;
     }
     const flagged = Boolean(state.flags[q.id]);
     if (f.flagMode === "only" && !flagged) return false;

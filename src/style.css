@@ -140,9 +140,12 @@ strong {
   padding: 8px;
 }
 .app-main {
+  --book-gutter-start: 30px;
+  --book-gutter-end: 30px;
+  --book-surface: #fff;
   max-width: 740px;
   margin: auto;
-  padding: 0 30px 120px;
+  padding: 0 var(--book-gutter-start) 120px;
 }
 .intro {
   padding: 42px 3px 22px;
@@ -243,6 +246,8 @@ strong {
 }
 .era-rail {
   position: fixed;
+  z-index: 10;
+  pointer-events: none;
   top: 165px;
   margin-left: -72px;
   display: flex;
@@ -266,7 +271,7 @@ strong {
   font-size: 19px;
   font-weight: 600;
   margin: 26px 0 0;
-  padding: 4px 0 17px;
+  padding: 4px var(--book-gutter-end) 17px var(--book-gutter-start);
   border-bottom: 2px solid #254b3b;
   letter-spacing: 0.03em;
 }
@@ -279,7 +284,8 @@ strong {
   margin-bottom: 7px;
 }
 .question {
-  padding: 22px 2px 17px;
+  padding: 22px var(--book-gutter-end) 17px var(--book-gutter-start);
+  background: var(--book-surface);
   border-bottom: 1px solid var(--line);
   scroll-margin-top: 140px;
 }
@@ -397,73 +403,6 @@ strong {
   background: #fbede7;
   border-color: #d3aa93;
 }
-.answer-popup {
-  border: 1px solid #ccd6c3;
-  border-top: 3px solid #426348;
-  border-radius: 12px;
-  background: #fffffa;
-  box-shadow: 0 10px 35px #21332429;
-  padding: 13px 17px 16px;
-  animation: popup-in 0.19s cubic-bezier(0.2, 1.4, 0.4, 1);
-  transform-origin: bottom center;
-  color: var(--green);
-}
-.answer-popup-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 10px;
-  letter-spacing: 0.15em;
-  color: #8a967f;
-  margin-bottom: 5px;
-}
-.answer-popup-label button {
-  border: 0;
-  padding: 0;
-  background: none;
-  font-size: 22px;
-  line-height: 1;
-  width: 32px;
-  height: 28px;
-}
-.answer-popup-text {
-  font-family: "Noto Serif JP", serif;
-  font-weight: 600;
-  font-size: 20px;
-  line-height: 1.6;
-  color: var(--red);
-  white-space: pre-wrap;
-}
-.answer-popup-fill {
-  font-size: 11px;
-  margin-top: 9px;
-  padding-top: 9px;
-  border-top: 1px solid var(--line);
-  color: #7a8874;
-}
-.answer-popup.closing {
-  animation: popup-out 0.12s ease-in forwards;
-  pointer-events: none;
-}
-@keyframes popup-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.88);
-  }
-  70% {
-    transform: translateY(-3px) scale(1.02);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-@keyframes popup-out {
-  to {
-    opacity: 0;
-    transform: translateY(6px) scale(0.95);
-  }
-}
 .note {
   display: flex;
   align-items: baseline;
@@ -545,7 +484,6 @@ strong {
   min-height: 32px;
 }
 .subquestion {
-  padding-left: 14px;
   border-left: 2px solid #e7ebe1;
 }
 .subquestion .question-text {
@@ -610,7 +548,7 @@ strong {
   margin-top: 10px;
 }
 .empty-page {
-  padding-top: 15px;
+  padding: 15px var(--book-gutter-end) 0 var(--book-gutter-start);
   border-bottom: 1px solid var(--line);
 }
 .empty-page h3 {
@@ -794,6 +732,39 @@ strong {
   color: #84917b;
   font-size: 12px;
   line-height: 1.9;
+}
+.answer-list {
+  margin-top: 22px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.answer-list > summary {
+  min-height: 44px;
+  padding: 12px 0;
+  color: var(--green);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.answer-list > summary:focus-visible {
+  outline: 3px solid var(--green);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.answer-list ol {
+  margin: 0;
+  padding-inline-start: 1.6em;
+}
+.answer-list li {
+  padding: 8px 0;
+  white-space: pre-wrap;
+}
+.answer-list small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-weight: 400;
 }
 .danger {
   color: #ad463c;
@@ -1136,8 +1107,8 @@ hr {
     max-height: 45vh;
   }
   .app-main {
-    padding-left: 30px;
-    padding-right: 20px;
+    --book-gutter-end: 20px;
+    padding-right: var(--book-gutter-end);
   }
   .header-inner {
     padding: 0 20px;
@@ -1221,9 +1192,6 @@ hr {
     font-size: calc(var(--study-font) * 0.72);
     padding: 7px 9px;
     line-height: 1.9;
-  }
-  .subquestion {
-    padding-left: 10px;
   }
   .bottom-nav {
     padding-top: 7px;
@@ -1369,6 +1337,10 @@ hr {
 /* Virtual rows own scroll anchoring; disable the browser's competing automatic anchor. */
 .virtual-book {
   overflow-anchor: none;
+  /* Let the reading paper reach both screen edges while its text keeps a gutter. */
+  width: calc(100% + var(--book-gutter-start) + var(--book-gutter-end));
+  margin-inline-start: calc(-1 * var(--book-gutter-start));
+  background: var(--book-surface);
 }
 .virtual-row {
   contain: layout style;

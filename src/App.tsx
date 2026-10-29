@@ -968,9 +968,11 @@ export default function App() {
                   }
                 >
                   <option value="">すべて</option>
+                  <option value="1+">★1以上（★1・★2・★3）</option>
+                  <option value="2+">★2以上（★2・★3）</option>
                   {[0, 1, 2, 3].map((n) => (
                     <option value={n} key={n}>
-                      ★{n}
+                      ★{n}のみ
                     </option>
                   ))}
                 </select>
@@ -1138,6 +1140,22 @@ export default function App() {
           <p className="muted">
             タグは入力欄から離れると保存され、絞り込みに使えます。
           </p>
+          {Boolean(activeAnswers?.length) && (
+            <details className="answer-list">
+              <summary>解答一覧（全文）</summary>
+              <p className="muted">本文の空欄には、文章につながる部分を表示します。</p>
+              <ol>
+                {activeAnswers?.map((answer) => (
+                  <li key={answer.id}>
+                    <strong>{answer.text}</strong>
+                    {answer.fill_text !== undefined && answer.fill_text !== answer.text && (
+                      <small>空欄に入る文字：{answer.fill_text}</small>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )}
         </Modal>
       )}
       {panel === "edit" && selected && activeQ && activeAnswers && (
@@ -1409,7 +1427,7 @@ export default function App() {
             ブラウザに保存領域の保護をリクエスト
           </button>
           <p className="muted">
-            日本史の栞 v1.2.0 · 教材{" "}
+            日本史の栞 v1.3.0 · 教材{" "}
             {data.dataset_version || data.schema_version}
           </p>
         </Modal>

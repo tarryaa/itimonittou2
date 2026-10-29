@@ -54,6 +54,29 @@ describe("backup protection and persistence", () => {
     expect(restored.dataset).toEqual(original);
     expect(restored.state).toEqual(state);
   });
+  it.each(["1+", "2+", "2"])(
+    "preserves importance %s in saved preferences and backup restoration",
+    async (stars) => {
+      const state = learned();
+      state.filters.stars = stars;
+      await saveState(state);
+      expect((await loadAppData(original)).state.filters.stars).toBe(stars);
+      const backup = exportBackup(original, state);
+      expect(validateBackup(backup).state.filters.stars).toBe(stars);
+      await restoreBackup(backup);
+      expect((await loadAppData(original)).state.filters.stars).toBe(stars);
+    },
+  );
+  it.each(["4+", "2-", "anything"])(
+    "rejects invalid importance filter %s before restoring",
+    (stars) => {
+      const state = learned();
+      state.filters.stars = stars;
+      expect(() => validateBackup(exportBackup(original, state))).toThrow(
+        "絞り込み条件",
+      );
+    },
+  );
   it("defaults legacy backups to classic and rejects unknown themes", () => {
     const legacy = learned();
     delete legacy.settings.theme;
